@@ -1,0 +1,11 @@
+[gd_resource type="LabelSettings" load_steps=2 format=3 uid="uid://d3f0qc5tlj0a3"]
+
+[ext_resource type="FontFile" uid="uid://dnfhwucenkxp2" path="res://assets/fonts/carter-sans-w01-bold.ttf" id="1_7yfah"]
+
+[resource]
+font = ExtResource("1_7yfah")
+font_size = 42
+outline_size = 3
+outline_color = Color(0.0823529, 0.0823529, 0.0823529, 1)
+shadow_size = 3
+shadow_color = Color(0.0823529, 0.0823529, 0.0823529, 0.686275)

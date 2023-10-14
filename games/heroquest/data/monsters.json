@@ -1,0 +1,84 @@
+{
+    "game_token":"heroquest",
+
+    "monsters_class" : [
+        "orc",
+        "not_dead",
+        "magic"
+    ],
+
+    "monsters": [
+      {
+         "name":"Goblin",
+         "article":0,
+         "quantity":6,
+         "size":[1,1],
+         "image":"",
+         "class": [0]
+      },
+      {
+         "name":"Orco",
+         "article":0,
+         "quantity":8,
+         "size":[1,1],
+         "image":"",
+         "class": [0]
+      },
+      {
+         "name":"Fimir",
+         "article":0,
+         "quantity":3,
+         "size":[1,1],
+         "image":"",
+         "class": [0]
+      },
+      {
+         "name":"Scheletro",
+         "article":2,
+         "quantity":4,
+         "size":[1,1],
+         "image":"",
+         "class": [1]
+      },
+      {
+         "name":"Zombie",
+         "article":2,
+         "quantity":2,
+         "size":[1,1],
+         "image":"",
+         "class": [1]
+      },
+      {
+         "name":"Mummia",
+         "article":3,
+         "quantity":2,
+         "size":[1,1],
+         "image":"",
+         "class": [1]
+      },
+      {
+         "name":"Guerriero del Caos",
+         "article":0,
+         "quantity":4,
+         "size":[1,1],
+         "image":"",
+         "class": [1,2]
+      },
+      {
+         "name":"Gargoyle",
+         "article":0,
+         "quantity":1,
+         "size":[1,1],
+         "image":"",
+         "class": [2]
+      },
+      {
+         "name":"Stregone del Chaos",
+         "article":2,
+         "quantity":1,
+         "size":[1,1],
+         "image":"",
+         "class": [2]
+      }
+    ]
+}

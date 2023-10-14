@@ -1,0 +1,98 @@
+[gd_scene load_steps=8 format=3 uid="uid://dgya1fl4j8m3m"]
+
+[ext_resource type="Texture2D" uid="uid://dbqxqdhbvm04" path="res://assets/ui/blue_button00.png" id="1_iisog"]
+[ext_resource type="Script" path="res://quest_start/quest_start.gd" id="1_mcrbv"]
+[ext_resource type="Texture2D" uid="uid://b37c6bte8anuh" path="res://assets/ui/back.jpg" id="1_wvd32"]
+[ext_resource type="Texture2D" uid="uid://cqkuoeusywdfm" path="res://assets/ui/green_button00.png" id="2_vmpgs"]
+[ext_resource type="Texture2D" uid="uid://ces8rb08r6plk" path="res://assets/ui/yellow_button00.png" id="3_4pt50"]
+[ext_resource type="LabelSettings" uid="uid://d3f0qc5tlj0a3" path="res://assets/titles_42_white.tres" id="4_5i0sr"]
+[ext_resource type="LabelSettings" uid="uid://cvr0xplbdiwv8" path="res://assets/titles_26_white.tres" id="5_wg4sa"]
+
+[node name="QuestStart" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_mcrbv")
+
+[node name="Background" type="TextureRect" parent="."]
+layout_mode = 0
+offset_left = -308.0
+offset_top = -146.0
+offset_right = 1612.0
+offset_bottom = 934.0
+texture = ExtResource("1_wvd32")
+flip_h = true
+
+[node name="MC" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/margin_left = 15
+theme_override_constants/margin_top = 15
+theme_override_constants/margin_right = 15
+theme_override_constants/margin_bottom = 15
+
+[node name="VBoxContainer" type="VBoxContainer" parent="MC"]
+layout_mode = 2
+
+[node name="TextureButton" type="TextureButton" parent="MC/VBoxContainer"]
+layout_mode = 2
+texture_normal = ExtResource("1_iisog")
+texture_pressed = ExtResource("2_vmpgs")
+texture_hover = ExtResource("3_4pt50")
+
+[node name="TitleLabel" type="Label" parent="MC/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+text = "titolo quest"
+label_settings = ExtResource("4_5i0sr")
+
+[node name="spacer" type="Control" parent="MC/VBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+
+[node name="DescriptionLabel" type="Label" parent="MC/VBoxContainer"]
+layout_mode = 2
+text = "titolo quest ddfgdfgdfgdfgdfggergerge
+erwer
+wer
+wer
+"
+label_settings = ExtResource("5_wg4sa")
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+uppercase = true
+
+[node name="spacer2" type="Control" parent="MC/VBoxContainer"]
+custom_minimum_size = Vector2(0, 30)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="GoalLabel" type="Label" parent="MC/VBoxContainer"]
+layout_mode = 2
+text = "titolo quest ddfgdfgdfgdfgdfggergerge
+erwer
+wer
+wer
+"
+label_settings = ExtResource("5_wg4sa")
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 2
+uppercase = true
+
+[node name="StartButton2" type="TextureButton" parent="MC/VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 4
+texture_normal = ExtResource("1_iisog")
+texture_pressed = ExtResource("2_vmpgs")
+texture_hover = ExtResource("3_4pt50")
+
+[node name="Sound" type="AudioStreamPlayer" parent="."]

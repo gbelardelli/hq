@@ -1,0 +1,13 @@
+{
+	"name" : "Heroquest",
+   "game_token":"heroquest",
+
+   "furnitures" : {
+   	"use_furnitures" : true,
+   	"furniture_count" : true	
+   },
+	
+	"cards" : true,
+	"wandering" : "none:one_time:on_demand"
+}
+
