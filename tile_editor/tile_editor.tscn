@@ -1,0 +1,70 @@
+[gd_scene load_steps=7 format=3 uid="uid://c4v6jq5qwb882"]
+
+[ext_resource type="Script" path="res://tile_editor/tile_editor.gd" id="1_3edbp"]
+[ext_resource type="Texture2D" uid="uid://qnsf1t1cqct" path="res://assets/ui/level_select_frame_128.png" id="1_dcwn5"]
+[ext_resource type="Texture2D" uid="uid://dbqxqdhbvm04" path="res://assets/ui/blue_button00.png" id="2_6lluh"]
+[ext_resource type="Texture2D" uid="uid://cqkuoeusywdfm" path="res://assets/ui/green_button00.png" id="3_anuep"]
+[ext_resource type="Texture2D" uid="uid://ces8rb08r6plk" path="res://assets/ui/yellow_button00.png" id="4_haetp"]
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_17tp7"]
+texture = ExtResource("1_dcwn5")
+
+[node name="TileEditor" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_3edbp")
+
+[node name="MC" type="MarginContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="HBoxContainer" type="HBoxContainer" parent="MC"]
+layout_mode = 2
+
+[node name="Panel" type="Panel" parent="MC/HBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxTexture_17tp7")
+
+[node name="TextureRect" type="TextureRect" parent="MC/HBoxContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 81.0
+offset_top = 53.0
+offset_right = -126.0
+offset_bottom = -86.0
+grow_horizontal = 2
+grow_vertical = 2
+expand_mode = 1
+stretch_mode = 4
+
+[node name="CanvasLayer" type="CanvasLayer" parent="MC/HBoxContainer/Panel"]
+
+[node name="TextureButton" type="TextureButton" parent="MC/HBoxContainer"]
+layout_mode = 2
+texture_normal = ExtResource("2_6lluh")
+texture_pressed = ExtResource("3_anuep")
+texture_hover = ExtResource("4_haetp")
+
+[node name="FileDialog" type="FileDialog" parent="."]
+title = "Open a File"
+initial_position = 2
+size = Vector2i(500, 500)
+unresizable = true
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.png")
+
+[connection signal="pressed" from="MC/HBoxContainer/TextureButton" to="." method="_on_texture_button_pressed"]
+[connection signal="file_selected" from="FileDialog" to="." method="_on_file_dialog_file_selected"]
