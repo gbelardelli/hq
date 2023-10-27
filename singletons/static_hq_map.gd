@@ -72,30 +72,66 @@ var _fog_map:Array=[]
 var _in_game_rooms:Dictionary={}
 var _doorId:int = 1
 
+# Generation parameters
+var _generate_near_center:bool = true
+var _max_deep:int = 3
+var _max_secret_doors:int = 5
+var _chance_of_secret_door:int = 90
+var _debug_seed:int = 0
+var _rooms_to_generate:int = 0
+var _group_mask:int = 0
 
-func generate_map(rooms:int, min_rooms:int, max_rooms:int,group_mask:int) -> void:
+func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, debug_seed:int) -> bool:
 	reset_all()
+	_debug_seed=debug_seed
+	_group_mask=group_mask
 
 	if rooms<1:
 		rooms=1
 
+	_generate_near_center=near_center
+	_max_secret_doors = secret_doors
+	
 	var rooms_in_mask=_get_rooms_for_group_mask(group_mask)
 	if rooms > rooms_in_mask:
 		rooms=rooms_in_mask
 
+	if _max_secret_doors > rooms:
+		_max_secret_doors = int(rooms/3)
+
+	_rooms_to_generate = rooms
 	_generate_rooms(rooms,group_mask)
 	_build_paths()
-	#_generate_secret_doors(3,20)
+	_generate_secret_doors(_max_secret_doors,_chance_of_secret_door)
 
-	for key in _in_game_rooms:
-		var doors=_in_game_rooms[key]["doors"]
-		if doors.size() < 1:
-			print("Huston we have a problem: the room [%s] has no doors!!" % [key])
+	var force_exit=0
+	while true:
+		var no_exit_rooms:Array = []
 
+		for key in _in_game_rooms:
+			var exits:Array=[]
+			var res=_find_exits(key, [key], exits)
+			if res == 0:
+				no_exit_rooms.append(key)
+
+		if no_exit_rooms.size() > 0:
+			force_exit+=1
+			_print_debug(no_exit_rooms[0])
+			_create_passageway_door(no_exit_rooms[0])
+		else:
+			break
+			
+		if force_exit>200:
+			print("Huston we have a serious problem! We can't fix rooms exits" % [no_exit_rooms])
+			break
+
+	_update_game_map()
+	
+	return true
 
 func _generate_secret_doors(num_doors:int, chance:int)->void:
-	for door in range(0,num_doors):
-		if _roll_d100_chance(chance) == true:
+	for i in range(0,num_doors):
+		if GlobalUtils.roll_d100_chance(chance) == true:
 			var rooms:Array=_in_game_rooms.keys()
 
 			# Un stanza può avere max 1 porta segreta
@@ -105,21 +141,130 @@ func _generate_secret_doors(num_doors:int, chance:int)->void:
 				if _has_secret_doors(room) == false:
 					break
 
-			var doors:Dictionary=_in_game_rooms[room]["doors"]
-			for dir in doors:
-				var doors_wall=doors[dir]["position"]
-				var chosed_door=doors_wall.pick_random()
-				# Prende a caso la stanza confinante
-				var other_room=doors[dir]["rooms"].pick_random()
-				var idx=doors[dir]["rooms"].find(other_room)
-				if idx==-1:
-					print("Huston we have a problem: the door does not exists!!")
-					return
-					
-				doors[dir]["type"][idx]="secret"
-				print("Porta segreta: stanza [%d] confine [%d] pos [%s] dir[%s]" % [room,other_room,chosed_door,dir])
-				break
+			var door=_in_game_rooms[room]["doors"].keys().pick_random()
+			var doors_array:Array
+			var chosed_door:Dictionary
 
+			if door > MAP_PASSAGEWAY:
+				doors_array=_in_game_rooms[door]["doors"][room]
+				chosed_door=doors_array[0]
+				chosed_door["type"]="secret"
+
+			doors_array=_in_game_rooms[room]["doors"][door]
+			chosed_door=doors_array[0]
+			chosed_door["type"]="secret"
+
+			_add_secret_door_to_map(chosed_door["dir"],chosed_door["pos"])
+			_remove_unnecessary_doors(room, door)
+
+
+func _has_secret_doors(room_num:int)->bool:
+	var doors_key:Dictionary=_in_game_rooms[room_num]["doors"]
+	for doors in doors_key:
+		for door in doors_key[doors]:
+			if door["type"]=="secret":
+				return true
+
+	return false
+
+
+func _remove_unnecessary_doors(room_num:int, door:int)->void:
+	var doors=_in_game_rooms[room_num]["doors"]
+	var can_be_removed_doors:Dictionary = {}
+
+	if door <= MAP_PASSAGEWAY:
+		# Prendere le porte di questa stanza ad esclusione di quella di entrata
+		# Per ogni porta controllare se le stanze adiacenti hanno uno sbocco
+		var rooms:Array = doors.keys()
+		var exit_rooms:Dictionary = {}
+		var exits_rooms:Array = []
+		for room in rooms:
+			if room <= MAP_PASSAGEWAY:
+				continue
+
+			var visited_rooms:Array = [room_num]
+			var num_exits=_find_exits(room, visited_rooms, exits_rooms)
+			exit_rooms[room]=num_exits
+
+		var can_remove_all_doors=false
+		for room in exit_rooms:
+			if exit_rooms[room] == 0:
+				can_remove_all_doors=false
+				break
+			
+			can_remove_all_doors=true
+
+		if can_remove_all_doors == true and exit_rooms.size() > 0:
+			if GlobalUtils.roll_d100_chance(50) == true:
+				for room in exits_rooms:
+					_remove_passageway_doors(room, _in_game_rooms[room])
+			else:
+				_remove_normal_doors(room_num)
+		elif can_remove_all_doors == true:
+			_remove_normal_doors(room_num)
+		elif exit_rooms.size() > 0:
+			for room in exits_rooms:
+				_remove_passageway_doors(room, _in_game_rooms[room])
+
+		_remove_passageway_doors(room_num, _in_game_rooms[room_num])
+	else:
+		_remove_room_doors(room_num)	
+
+func _remove_room_doors(room_num:int)->void:
+	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
+	var keys=doors.keys()
+
+	#TODO: i corridoi potrebbero non essere identificati solo con 1
+	if doors.has(1):
+		#print("La stanza [%d] con PS ha sbocchi diretti su 1" % [room_num])
+		for room in keys:
+			if room > MAP_PASSAGEWAY:
+				var exits=[]
+				if _find_exits(room, [room_num], exits) > 0:
+					if GlobalUtils.roll_d100_chance(50) == true:
+						#print("Elimino l'uscita sul corridoio della stanza [%d]" % [room_num])
+						_remove_passageway_doors(room_num, _in_game_rooms[room_num])
+						break
+					else:
+						#print("Elimino le uscite sul corridoio delle stanze %s" % [exits])
+						for exit in exits:
+							_remove_passageway_doors(exit, _in_game_rooms[exit])
+	else:
+		#print("La stanza [%d] con PS NON ha sbocchi diretti su 1" % [room_num])
+		for room in keys:
+			if room <= MAP_PASSAGEWAY:
+				#print("La stanza [%d] ha un uscita su 1 posso togliere la porta non segreta dalla stanza [%d]" % [room,room_num])
+				_remove_normal_doors(room,room_num)
+			else:
+				var exits=[]
+				if _find_exits(room, [room_num], exits) > 0:
+					#print("La stanza [%d] ha un uscita su 1" % [room])
+					#print("Posso eliminare la porta non segreta tra la stanza [%d] e la stanza [%d]" % [room_num,room])
+					_remove_normal_doors(room,room_num)
+
+
+func _remove_normal_doors(room_num:int, adj:int=0)->void:
+	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
+	var to_delete:Array = []
+
+	for room in doors:
+		for door in doors[room]:
+			if door["type"] == "normal":
+				var other_room=_get_adjacent_room(door["dir"], door["pos"])
+				if other_room > MAP_PASSAGEWAY:
+					if adj==0 or adj==other_room:
+						var other_doors=_in_game_rooms[other_room]["doors"]
+						other_doors.erase(room_num)
+				if adj==0 or adj==other_room:
+					to_delete.append(door)
+				#print("   remove normal door from [%d]" % [room_num])
+
+	for door in to_delete:
+		var key=doors.find_key([door])
+		if key != null:
+			doors.erase(key)
+			if _in_game_rooms[room_num]["doors"].size() == 0:
+				_in_game_rooms[room_num]["doors"].erase(room_num)
 
 
 func _build_paths()->void:
@@ -127,13 +272,15 @@ func _build_paths()->void:
 	var visited_rooms=[]
 	var room:int=0
 	var neighbor_info=_build_neighbor_info()
+
 	while true:
 		while true:
 			room=keys.pick_random()
-			if visited_rooms.find(room) == -1:
+			if room not in visited_rooms:
 				visited_rooms.append(room)
 				break
 
+		#print("Start traverse room [%d] doors [%s]" % [room, _in_game_rooms[room]["doors"]])
 		_traverse_map(room, 1, neighbor_info, [])
 		if visited_rooms.size() == keys.size():
 			break
@@ -141,7 +288,13 @@ func _build_paths()->void:
 
 func _traverse_map(room_num:int, deep:int, neighbor_info:Dictionary, walk_history:Array)->void:
 	var room:Dictionary=_in_game_rooms[room_num]
-	if room["valid"] == true or deep > 4:
+	if room["valid"] == true:
+		#print("   End traverse room [%d] room is valid" % [room_num])
+		return
+
+	if deep > _max_deep:
+		#print("   Max deep reached on room [%d]" % [room_num])
+		room["valid"]=true
 		return
 
 	var neighbor_rooms:Array=neighbor_info[room_num]
@@ -158,99 +311,77 @@ func _traverse_map(room_num:int, deep:int, neighbor_info:Dictionary, walk_histor
 	if neighbor_rooms.size() == 0:
 		# La stanza non confina con altre stanze
 		room["valid"]=true
+		#print("   End traverse room [%d] no neighbor found. Deep [%d]" % [room_num, deep])
 		# ... ma se è stata aperta una porta dalla
 		# stanza precedente è possibile rimuovere
 		# le porte sui corridoi
-		#if deep>1:
-		#	_remove_passageway_doors(room_num, room)
+		if deep>1:
+			_remove_passageway_doors(room_num, room)
 
 		return
 
 	walk_history.append(room_num)
 	var neighbor_room = neighbor_rooms.pick_random()
 	room["valid"]=true
-	var leftovers_doors:int = 0
 
-	#if deep>1:
-	#	leftovers_doors=_remove_passageway_doors(room_num, room)
+	if deep>1:
+		_remove_passageway_doors(room_num, room)
 
 	deep+=1
+	#print("   Open door on room [%d] to room [%d]" % [room_num,neighbor_room])
 	_add_door(room_num, neighbor_room)
 	_traverse_map(neighbor_room,deep,neighbor_info,walk_history)
 
 
-func _walk(room_num:int, neighbor_info:Dictionary, visited:Array)->void:
-	var neighbor_rooms:Array=neighbor_info[room_num]
+func _remove_passageway_doors(room_num:int, room_dict:Dictionary)->void:
+	var doors=_in_game_rooms[room_num]["doors"]
+	var to_delete:Array = []
 
-	# Rimuovo dalla lista delle stanze vicine, quelle già visitate
-	for room in visited:
-		while true:
-			var idx:int = neighbor_rooms.find(room)
-			if idx != -1:
-				neighbor_rooms.remove_at(idx)
-			else:
-				break
+	for room in doors:
+		if room <= MAP_PASSAGEWAY:
+			for door in doors[room]:
+				if door["type"] == "normal":
+					#print("   Remove passageway door on room [%d] door [%s]" % [room_num, door])
+					to_delete.append(door)
 
+	for door in to_delete:
+		if door in doors[1]:
+			doors[1].erase(door)
 
-
-func _remove_passageway_doors(room_num:int, room:Dictionary)->int:
-	var passageways:Dictionary = {}
-	var doors_list=room["doors"]
-	for dir in doors_list:
-		for door in doors_list[dir]["rooms"]:
-			if door == MAP_PASSAGEWAY:
-				passageways[dir] = doors_list[dir]["position"]
-
-	var keys=passageways.keys()
-	var chance=100-(25*keys.size())
-	var to_remove=keys.size()-1
-	
-	for i in to_remove:
-		_remove_door(room_num,passageways)
-	
-	if _roll_d100_chance(chance) == true:
-		_remove_door(room_num, passageways)
-
-	return 0
+	if doors.has(1) && doors[1].size() == 0:
+		doors.erase(1)
 
 
-func _remove_door(room_num:int, passageways:Dictionary)->void:
-	var room=_in_game_rooms[room_num]
-	var doors=room["doors"]
+func _find_exits(room_num:int, visited:Array, exits:Array)->int:
+	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
+	var cnt=0
+	for room in doors:
+		if room in visited:
+			continue
 
-	var direction=passageways.keys().pick_random()
-	doors.erase(direction)
-	var coord=passageways[direction][0]
-	#passageways.erase(direction)
-	print("Removed door at [%s] dir[%s] room[%s]" % [coord,direction,room_num])
+		if room <= MAP_PASSAGEWAY:
+			#print("  Find exit in [%d]"%[room_num])
+			exits.append(room_num)
+			cnt+=1
+			continue
 
-	_remove_door_from_map(direction, coord)
+		visited.append(room_num)
+		cnt += _find_exits(room, visited, exits)
 
-
-func _remove_door_from_map(direction:String, door:Vector2i)->void:
-	if direction=="north":
-		_layer_map[door.y][door.x]-=1
-		_layer_map[door.y-1][door.x]-=4
-	elif direction=="east":
-		_layer_map[door.y][door.x]-=2
-		_layer_map[door.y][door.x+1]-=8
-	elif direction=="south":
-		_layer_map[door.y][door.x]-=4
-		_layer_map[door.y+1][door.x]-=1
-	else:
-		_layer_map[door.y][door.x]-=8
-		_layer_map[door.y][door.x-1]-=2
+	return cnt
 
 
-func _roll_d100_chance(percent:int)->bool:
-	if randi_range(1,100) < percent:
-		return true
-	
-	return false
+func _update_game_map()->void:
+	for room_num in _in_game_rooms:
+		var doors=_in_game_rooms[room_num]["doors"]
+		for door_num in doors:
+			for door in doors[door_num]:
+				_add_door_to_map(door["dir"],door["pos"])
 
 
 func _build_neighbor_info()->Dictionary:
 	var neighbor_info={}
+
 	for key in _in_game_rooms:
 		neighbor_info[key] = _get_neighbor_rooms(_in_game_rooms[key])
 
@@ -282,17 +413,25 @@ func _add_door(main_room:int, other_room:int)->void:
 				room_boundaries[dir]=walls[wall]
 
 	var direction = room_boundaries.keys().pick_random()
-	var door_coord=room_boundaries[direction].pick_random()
-
+	var door_coord:Vector2i
+	if _generate_near_center == true:
+		var idx=room_boundaries[direction].size()
+		idx = idx / 2
+		door_coord=room_boundaries[direction][idx]
+	else:
+		door_coord=room_boundaries[direction].pick_random()
 	_create_door(direction, door_coord, main_room)
 
 
-func _has_secret_doors(room_num:int)->bool:
+func _has_door_in_room(room_num:int, adj:int)->bool:
+	if room_num<2:
+		return false
+
 	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
 	for dir in doors:
 		var door_wall=doors[dir]
-		for door in door_wall["type"]:
-			if door=="secret":
+		for door in door_wall["rooms"]:
+			if door == adj:
 				return true
 
 	return false
@@ -301,23 +440,18 @@ func _has_secret_doors(room_num:int)->bool:
 func _generate_rooms(rooms:int,group_id:int)->void:
 	var created_rooms = []
 	for i in range(rooms):
-		var count=0
 		while true:
 			var room=randi_range(2,23)
-			count+=1
-			if count >= 10000:
-				print("***************************************")
-				break
 			if _game_rooms_list[room]["group"] & group_id == 0:
 				continue
 
-			if created_rooms.find(room) == -1:
+			if room not in created_rooms:
 				_create_room(room)
 				created_rooms.append(room)
 				break
 
 	for key in _in_game_rooms:
-		_find_room_boundaries(key)
+		_resolve_room_boundaries(key)
 		_create_passageway_door(key)
 
 
@@ -377,7 +511,7 @@ func _create_room(room_num:int) -> void:
 	room[BOUNDARIES_KEY]["west"] = {}	
 
 
-func _find_room_boundaries(room_num:int) -> void:
+func _resolve_room_boundaries(room_num:int) -> void:
 	var room = _in_game_rooms[room_num][BOUNDARIES_KEY]
 	for y in range(MAP_HEIGHT):
 		for x in range(MAP_WIDTH):
@@ -406,19 +540,26 @@ func _create_passageway_door(room_num: int)->void:
 
 	for dir in DIRECTIONS:
 		for wall in room[dir]:
-			if wall == MAP_PASSAGEWAY:
+			if wall > 0 && wall <= MAP_PASSAGEWAY:
 				random_corridor_wall.append( { dir: room[dir][MAP_PASSAGEWAY] })
 
 	var prev_dir:Array = []
 	var total_doors:int=0
 	while true:
 		var room_walls:Dictionary = random_corridor_wall.pick_random()
+		
 		var dir = room_walls.keys()[0]
-		if prev_dir.find(dir) != -1:
+		if dir in prev_dir:
 			continue
 
 		prev_dir.append(dir)
-		var door_position:Vector2i=room_walls[dir].pick_random()
+		var door_position:Vector2i
+		if _generate_near_center == true:
+			var idx=room_walls[dir].size()
+			idx = idx / 2
+			door_position=room_walls[dir][idx]
+		else:
+			door_position=room_walls[dir].pick_random()
 
 		_create_door(dir, door_position, room_num)
 		total_doors+=1
@@ -431,49 +572,46 @@ func _create_passageway_door(room_num: int)->void:
 
 
 func _can_add_door(room_num:int,modifier:int)->bool:
-	var d100=randi_range(1,100)
 	var chance:int=0
 	var room_size:int = _in_game_rooms[room_num]["size"]
 	if room_size < 10:
-		chance = 10 - (modifier*5)
+		chance = 5 - (modifier*5)
 	elif room_size < 15:
-		chance = 20 - (modifier*6)
+		chance = 10 - (modifier*6)
 	elif room_size < 25:
-		chance = 30 - (modifier*7)
+		chance = 20 - (modifier*7)
 	else:
-		chance = 60 - (modifier*2)
+		chance = 80 - (modifier*2)
 
-	return _roll_d100_chance(chance)
+	return GlobalUtils.roll_d100_chance(chance)
 
 
 func _create_door(direction:String, position:Vector2i, room_num:int)->void:
 	var room = _in_game_rooms[room_num]
 	var adj=_get_adjacent_room(direction,position)
-	
+
 	_create_door_dict(room, direction,position,adj)
-	if adj != MAP_PASSAGEWAY:
+	if adj > MAP_PASSAGEWAY:
 		var other_room=_in_game_rooms[adj]
-		var other_doors=other_room["doors"]
 		var other_direction=_get_opposite_direction(direction)
 		_create_door_dict(other_room, other_direction,position+OPPOSITE_VALUE[direction],room_num)
 
-	_add_door_to_map(direction,position)
-
 
 func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:int)->void:
-	var doors=room["doors"]
-	if doors.has(direction) == false:
-		doors[direction]={}
+	var doors:Dictionary=room["doors"]
 
-	var dir=doors[direction]
-	if dir.is_empty() == true:
-		dir["position"] = [position]
-		dir["rooms"] = [adj]
-		dir["type"] = ["normal"]
+	if doors.has(adj) == false:
+		doors[adj] = [{
+			"dir":direction,
+			"pos":position,
+			"type":"normal"
+		}]
 	else:
-		dir["position"].append(position)
-		dir["rooms"].append(adj)
-		dir["type"].append("normal")
+		doors[adj].append( {
+			"dir":direction,
+			"pos":position,
+			"type":"normal"
+		} )
 
 
 func _get_opposite_direction(dir:String)->String:
@@ -501,6 +639,21 @@ func _add_door_to_map(direction:String, door:Vector2i)->void:
 	else:
 		_layer_map[door.y][door.x]|=8
 		_layer_map[door.y][door.x-1]|=2
+
+
+func _add_secret_door_to_map(direction:String, door:Vector2i)->void:
+	if direction=="north":
+		_layer_map[door.y][door.x]|=16
+		_layer_map[door.y-1][door.x]|=64
+	elif direction=="east":
+		_layer_map[door.y][door.x]|=32
+		_layer_map[door.y][door.x+1]|=128
+	elif direction=="south":
+		_layer_map[door.y][door.x]|=64
+		_layer_map[door.y+1][door.x]|=18
+	else:
+		_layer_map[door.y][door.x]|=128
+		_layer_map[door.y][door.x-1]|=32
 
 
 func _get_adjacent_room(direction:String, position:Vector2i)->int:
@@ -549,40 +702,58 @@ func print_layer_map() -> void:
 		print(map_str)
 	print("----------------------------------------------------------------------------")
 
-func print_validity()->void:
-	for key in _in_game_rooms:
-		print(key , " -> ", _in_game_rooms[key]["valid"])
-
-func print_total_doors() -> void:
-	var tot=0
-	for y in range(MAP_HEIGHT):
-		for x in range(MAP_WIDTH):
-			if _layer_map[y][x] != 0:
-				tot+=1
-			
-	print("Porte totali: %d" % [tot/2])
 
 func print_json() -> void:
 	var jstr = JSON.stringify(_in_game_rooms)
 	print(jstr)
 
+
+func _print_debug(room:int)->void:
+	print("=====================================")
+	print("create passageway door in room [%d]" % [room])
+	print("_generate_near_center: %s" % [_generate_near_center])
+	print("_max_deep: %d" % [_max_deep])
+	print("_max_secret_doors: %d" % [_max_secret_doors])
+	print("_debug_seed: %d" % [_debug_seed])
+	print("_rooms_to_generate: %d" % [_rooms_to_generate])
+	print("_group_mask: %d" % [_group_mask])
+
+
 func get_game_map() -> Array:
 	return _game_map
+
 
 func get_layer_map() -> Array:
 	return _layer_map
 	
+
 func is_cell_visible(cell:Vector2i) -> bool:
 	return (_fog_map[cell.y][cell.x] > 0)
+
+
+func _build_paths_test(room_sequence:Array)->void:
+	var keys:Array=_in_game_rooms.keys()
+	var visited_rooms=[]
+	var neighbor_info=_build_neighbor_info()
+	#print(neighbor_info)
+
+	for room in room_sequence:
+		if room not in visited_rooms:
+			visited_rooms.append(room)
+
+		print("Start traverse room [%d] doors [%s]" % [room, _in_game_rooms[room]["doors"]])
+		_traverse_map(room, 1, neighbor_info, [])
+
 
 func tests() -> void:
 	reset_all()
 	
-	_create_room(2)
-	_create_room(3)
-	_create_room(4)
-	_create_room(6)
+	_create_room(23)
 
 	for key in _in_game_rooms:
-		_find_room_boundaries(key)
-		_create_passageway_door(key)
+		_resolve_room_boundaries(key)
+
+	_create_door("west", Vector2i(18, 13), 12)
+	_create_door("south", Vector2i(19, 13), 12)
+	_create_door("north", Vector2i(15,13), 14)
+	_create_door("east", Vector2i(19, 17), 15)

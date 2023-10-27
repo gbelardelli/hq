@@ -96,3 +96,17 @@ func get_quests_list(game:String)->Array:
 		print("Huston we have a problem! An error occurred when trying to access the path '%s'" %[dir_path])
 	
 	return result
+
+func roll_d100_chance(percent:int)->bool:
+	if randi_range(1,100) < percent:
+		return true
+	
+	return false
+
+func roll_dice(sides:int)->int:
+	var sum=0
+	for i in range(0,4):
+		sum+=randi_range(1,sides)
+	
+	return int(sum/4)
+
