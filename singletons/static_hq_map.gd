@@ -37,6 +37,42 @@ const HQMap = [
 ]
 
 
+var _passageways = {
+	1 : { "coord" : Vector2i(1,0), "dim" : Vector2i(11,1) },
+	2 : { "coord" : Vector2i(14,0), "dim" : Vector2i(11,1) },
+	3 : { "coord" : Vector2i(25,0), "dim" : Vector2i(1,9) },
+	4 : { "coord" : Vector2i(25,10), "dim" : Vector2i(1,9) },
+	5 : { "coord" : Vector2i(14,18), "dim" : Vector2i(11,1) },
+	6 : { "coord" : Vector2i(1,18), "dim" : Vector2i(11,1) },
+	7 : { "coord" : Vector2i(0,10), "dim" : Vector2i(1,9) },
+	8 : { "coord" : Vector2i(0,0), "dim" : Vector2i(1,9) },
+	9 : { "coord" : Vector2i(0,9), "dim" : Vector2i(9,1) },
+	10 : { "coord" : Vector2i(17,9), "dim" : Vector2i(9,1) },
+	11 : { "coord" : Vector2i(12,0), "dim" : Vector2i(2,6) },
+	12 : { "coord" : Vector2i(12,13), "dim" : Vector2i(2,6) },
+	13 : { "coord" : Vector2i(10,6), "dim" : Vector2i(6,1) },
+	14 : { "coord" : Vector2i(10,12), "dim" : Vector2i(6,1) },
+	15 : { "coord" : Vector2i(9,6), "dim" : Vector2i(1,7) },
+	16 : { "coord" : Vector2i(16,6), "dim" : Vector2i(1,7) },
+}
+var tiles = { 
+			2 : { "size" : 12, "dim" : Vector2i(4,3), "type" : 2, "cells" : [ 
+					[1,1,1,1],
+					[1,1,1,1],
+					[1,1,1,1],
+					[1,1,1,1]]
+				},
+			64 : { "size" : 11, "dim" : Vector2i(11,1), "type" : 1, "cells" : [ 
+					[1,1,1,1,1,1,1,1,1,1,1] ]
+				},
+			65 :  { "size" : 14, "dim" : Vector2i(7,2), "type" : 1, "cells" : [ 
+					[ 1,1,1,1,1,1,1 ],
+					[ 1,1,1,1,1,1,1 ] ]
+				},
+			66 : { "size" : 9, "dim" : Vector2i(9,1), "type" : 1, "cells" : [ 
+							[1,1,1,1,1,1,1,1,1] ]
+						},
+}
 var _game_rooms_list = {
 	2: { "coord" : Vector2i(1,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
 	3: { "coord" : Vector2i(5,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
@@ -73,7 +109,7 @@ var _fog_map:Array=[]
 var _in_game_rooms:Dictionary={}
 var _doorId:int = 1
 
-var _astar_grid = AStarGrid2D.new()
+var _astar_grid:AStarGrid2D
 
 # Generation parameters
 var _generate_near_center:bool = true
@@ -129,10 +165,82 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 			print("Huston we have a serious problem! We can't fix rooms exits" % [no_exit_rooms])
 			break
 
+	_dd()
 	_update_game_map()
-	_get_passageway_doors_list()
 
 	return true
+
+
+func _dd()->void:
+	var doors_list=_get_passageway_doors_list()
+	var first_door:Vector2i = doors_list[0]
+	print(doors_list)
+	
+	# Check if passageway has doors
+	
+	for key in _passageways:
+		if _can_close_passageway(key,doors_list) == true:
+			var rect:Rect2i = Rect2i(_passageways[key]["coord"], _passageways[key]["dim"])
+			var x1=rect.position.x+rect.size.x-1
+			var y1=rect.position.y+rect.size.y-1
+
+			_astar_grid.set_point_solid(rect.position,true)
+			_astar_grid.set_point_solid(Vector2i(x1,y1),true)
+			var expand_x=false
+			if rect.position.x != x1:
+				expand_x=true
+				
+				
+				_astar_grid.set_point_solid(Vector2i(x1,rect.position.y),true)
+				_astar_grid.set_point_solid(Vector2i(rect.position.x,y1),true)
+
+			if _can_reach_other_doors(first_door, doors_list) == false:
+				_astar_grid.set_point_solid(rect.position,false)
+				_astar_grid.set_point_solid(Vector2i(x1,y1),false)
+			else:
+				#if key >= 13:
+				#	print("eccolo")
+				print("Chiudo [%d] [%s]" % [key,_passageways[key]])
+				_game_map[rect.position.y][rect.position.x]=0
+				_game_map[y1][x1]=0
+				if rect.position.x != x1:
+					_game_map[rect.position.y][x1]=0
+					_game_map[y1][rect.position.x]=0
+
+
+func _set_solid_point(coord:Vector2i, expand_x:bool, set_solid:bool)->void:
+	pass
+
+func _can_reach_other_doors(start:Vector2i, doors_list:Array)->bool:
+	var num_reached=0
+	for idx in range(1,doors_list.size()):
+		var step_list = _astar_grid.get_id_path(start, doors_list[idx])
+		if step_list.size() > 0:
+			num_reached+=1
+	
+	if num_reached == doors_list.size()-1:
+		return true
+		
+	return false
+
+
+func _can_close_passageway(id:int, doors_list:Array)->bool:
+	var passageway:Dictionary = _passageways[id]
+	var has_door=false
+	for door in doors_list:
+		var rect:Rect2i = Rect2i(passageway["coord"], passageway["dim"])
+		var x=rect.position.x
+		var y=rect.position.y
+		var x1=x+rect.size.x
+		var y1=y+rect.size.y
+		if door.x >= x && door.x <= x1 && door.y >= y && door.y <= y1:
+			has_door=true
+			break
+
+	if not has_door:
+		return true
+
+	return false
 
 func _generate_secret_doors(num_doors:int, chance:int)->void:
 	for i in range(0,num_doors):
@@ -385,13 +493,18 @@ func _update_game_map()->void:
 
 func _get_passageway_doors_list()->Array:
 	var doors_list:Array=[]
-	for y in range(MAP_HEIGHT):
-		for x in range(MAP_WIDTH):
-			if _game_map[y][x] <= MAP_PASSAGEWAY && _layer_map[y][x] != 0:
-				doors_list.append(Vector2i(x,y))
 
-	print_game_map()
-	print_layer_map()
+	for room_num in _in_game_rooms:
+		var doors=_in_game_rooms[room_num]["doors"]
+		for door_num in doors:
+			if door_num <= MAP_PASSAGEWAY:
+				for door in doors[door_num]:
+					var pos:Vector2i = door["pos"]+OPPOSITE_VALUE[door["dir"]]
+					_astar_grid.set_point_solid(pos,false)
+					doors_list.append(pos)
+
+	#print(doors_list)
+
 	return doors_list
 
 
@@ -474,7 +587,10 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 func reset_all() -> void:
 	_astar_grid = AStarGrid2D.new()
 	_astar_grid.cell_size = Vector2(1, 1)
-	_astar_grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
+	_astar_grid.size = Vector2(MAP_WIDTH, MAP_HEIGHT)
+	_astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
+	_astar_grid.update()
+	#_astar_grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
 	_doorId=1
 	_game_map=[]
 	_layer_map=[]
@@ -496,6 +612,7 @@ func reset_all() -> void:
 			_fog_map[y][x] = 0
 			_astar_grid.set_point_solid(Vector2i(x,y),true)
 
+	
 	for key in _game_rooms_list:
 		_game_rooms_list[key]["doors"] = {}
 		_game_rooms_list[key]["boundaries"] = {}
@@ -735,6 +852,17 @@ func _print_debug(room:int)->void:
 	print("_rooms_to_generate: %d" % [_rooms_to_generate])
 	print("_group_mask: %d" % [_group_mask])
 
+
+func _print_astarmap()->void:
+	for y in range(MAP_HEIGHT):
+		var map_str=""
+		for x in range(MAP_WIDTH):
+			if _astar_grid.is_point_solid(Vector2i(x,y)) == true:
+				map_str += "%001 "
+			else:
+				map_str += "%000 "
+		print(map_str)
+	print("----------------------------------------------------------------------------")
 
 func get_game_map() -> Array:
 	return _game_map
