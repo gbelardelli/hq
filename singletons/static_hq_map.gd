@@ -36,6 +36,7 @@ const HQMap = [
 	[001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001,001]
 ]
 
+
 var _game_rooms_list = {
 	2: { "coord" : Vector2i(1,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
 	3: { "coord" : Vector2i(5,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
@@ -72,6 +73,8 @@ var _fog_map:Array=[]
 var _in_game_rooms:Dictionary={}
 var _doorId:int = 1
 
+var _astar_grid = AStarGrid2D.new()
+
 # Generation parameters
 var _generate_near_center:bool = true
 var _max_deep:int = 3
@@ -83,6 +86,7 @@ var _group_mask:int = 0
 
 func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, debug_seed:int) -> bool:
 	reset_all()
+
 	_debug_seed=debug_seed
 	_group_mask=group_mask
 
@@ -126,7 +130,8 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 			break
 
 	_update_game_map()
-	
+	_get_passageway_doors_list()
+
 	return true
 
 func _generate_secret_doors(num_doors:int, chance:int)->void:
@@ -154,7 +159,6 @@ func _generate_secret_doors(num_doors:int, chance:int)->void:
 			chosed_door=doors_array[0]
 			chosed_door["type"]="secret"
 
-			_add_secret_door_to_map(chosed_door["dir"],chosed_door["pos"])
 			_remove_unnecessary_doors(room, door)
 
 
@@ -376,7 +380,19 @@ func _update_game_map()->void:
 		var doors=_in_game_rooms[room_num]["doors"]
 		for door_num in doors:
 			for door in doors[door_num]:
-				_add_door_to_map(door["dir"],door["pos"])
+				_add_door_to_map(door["dir"],door["pos"], door["type"] == "secret")
+
+
+func _get_passageway_doors_list()->Array:
+	var doors_list:Array=[]
+	for y in range(MAP_HEIGHT):
+		for x in range(MAP_WIDTH):
+			if _game_map[y][x] <= MAP_PASSAGEWAY && _layer_map[y][x] != 0:
+				doors_list.append(Vector2i(x,y))
+
+	print_game_map()
+	print_layer_map()
+	return doors_list
 
 
 func _build_neighbor_info()->Dictionary:
@@ -456,6 +472,9 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 
 
 func reset_all() -> void:
+	_astar_grid = AStarGrid2D.new()
+	_astar_grid.cell_size = Vector2(1, 1)
+	_astar_grid.region = Rect2i(0, 0, MAP_WIDTH, MAP_HEIGHT)
 	_doorId=1
 	_game_map=[]
 	_layer_map=[]
@@ -475,6 +494,7 @@ func reset_all() -> void:
 			_game_map[y][x] = 0
 			_layer_map[y][x] = 0
 			_fog_map[y][x] = 0
+			_astar_grid.set_point_solid(Vector2i(x,y),true)
 
 	for key in _game_rooms_list:
 		_game_rooms_list[key]["doors"] = {}
@@ -486,9 +506,9 @@ func reset_all() -> void:
 # da HQMap. Il ciclo continua per tutta la mappa, così è
 # possibile avere room di qualsiasi forma
 func _create_room(room_num:int) -> void:
-	var room_cells=0
+	var room_cells:int=0
 	for y in range(MAP_HEIGHT):
-		var cells_founded=0
+		var cells_founded:int=0
 		for x in range(MAP_WIDTH):
 			if HQMap[y][x] == room_num:
 				_game_map[y][x] = room_num
@@ -496,6 +516,7 @@ func _create_room(room_num:int) -> void:
 				cells_founded+=1
 			elif HQMap[y][x] == 1:
 				_game_map[y][x] = 1
+				_astar_grid.set_point_solid(Vector2i(x,y),false)
 
 		if room_cells >= 1 and cells_founded == 0:
 			break
@@ -503,7 +524,7 @@ func _create_room(room_num:int) -> void:
 	# Copia le info della room e aggiunge i boundaries che servono
 	# poi per creare le porte sulle pareti
 	_in_game_rooms[room_num]=_game_rooms_list[room_num]
-	var room = _in_game_rooms[room_num]
+	var room:Dictionary = _in_game_rooms[room_num]
 	room[BOUNDARIES_KEY] = {}
 	room[BOUNDARIES_KEY]["north"] = {}
 	room[BOUNDARIES_KEY]["east"] = {}
@@ -626,34 +647,30 @@ func _get_opposite_direction(dir:String)->String:
 		
 	return "east"
 
-func _add_door_to_map(direction:String, door:Vector2i)->void:
-	if direction=="north":
-		_layer_map[door.y][door.x]|=1
-		_layer_map[door.y-1][door.x]|=4
-	elif direction=="east":
-		_layer_map[door.y][door.x]|=2
-		_layer_map[door.y][door.x+1]|=8
-	elif direction=="south":
-		_layer_map[door.y][door.x]|=4
-		_layer_map[door.y+1][door.x]|=1
-	else:
-		_layer_map[door.y][door.x]|=8
-		_layer_map[door.y][door.x-1]|=2
 
-
-func _add_secret_door_to_map(direction:String, door:Vector2i)->void:
+func _add_door_to_map(direction:String, door:Vector2i, secret:bool)->void:
+	var bit_mask_door:int = 0
+	var bit_mask_opposite:int = 0
+	var opposite_coord:Vector2i = door+OPPOSITE_VALUE[direction]
 	if direction=="north":
-		_layer_map[door.y][door.x]|=16
-		_layer_map[door.y-1][door.x]|=64
+		bit_mask_door=1
+		bit_mask_opposite=4
 	elif direction=="east":
-		_layer_map[door.y][door.x]|=32
-		_layer_map[door.y][door.x+1]|=128
+		bit_mask_door=2
+		bit_mask_opposite=8
 	elif direction=="south":
-		_layer_map[door.y][door.x]|=64
-		_layer_map[door.y+1][door.x]|=18
+		bit_mask_door=4
+		bit_mask_opposite=1
 	else:
-		_layer_map[door.y][door.x]|=128
-		_layer_map[door.y][door.x-1]|=32
+		bit_mask_door=8
+		bit_mask_opposite=2
+		
+	if secret==true:
+		bit_mask_door<<=4
+		bit_mask_opposite<<=4
+
+	_layer_map[door.y][door.x]|=bit_mask_door
+	_layer_map[opposite_coord.y][opposite_coord.x]|=bit_mask_opposite
 
 
 func _get_adjacent_room(direction:String, position:Vector2i)->int:

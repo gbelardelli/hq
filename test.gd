@@ -158,3 +158,7 @@ func _on_button_5_pressed():
 	print(_seed)
 	StaticHqMap.generate_map(spin_box.value,spin_box_2.value,check_box.button_pressed,_group,_seed)
 	gen_map()
+
+
+func _on_texture_rect_gui_input(event):
+	print(event)
