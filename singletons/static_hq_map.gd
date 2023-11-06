@@ -38,22 +38,22 @@ const HQMap = [
 
 
 var _passageways = {
-	1 : { "coord" : Vector2i(1,0), "dim" : Vector2i(11,1) },
-	2 : { "coord" : Vector2i(14,0), "dim" : Vector2i(11,1) },
-	3 : { "coord" : Vector2i(25,0), "dim" : Vector2i(1,9) },
-	4 : { "coord" : Vector2i(25,10), "dim" : Vector2i(1,9) },
-	5 : { "coord" : Vector2i(14,18), "dim" : Vector2i(11,1) },
-	6 : { "coord" : Vector2i(1,18), "dim" : Vector2i(11,1) },
-	7 : { "coord" : Vector2i(0,10), "dim" : Vector2i(1,9) },
-	8 : { "coord" : Vector2i(0,0), "dim" : Vector2i(1,9) },
-	9 : { "coord" : Vector2i(0,9), "dim" : Vector2i(9,1) },
-	10 : { "coord" : Vector2i(17,9), "dim" : Vector2i(9,1) },
-	11 : { "coord" : Vector2i(12,0), "dim" : Vector2i(2,6) },
-	12 : { "coord" : Vector2i(12,13), "dim" : Vector2i(2,6) },
-	13 : { "coord" : Vector2i(10,6), "dim" : Vector2i(6,1) },
-	14 : { "coord" : Vector2i(10,12), "dim" : Vector2i(6,1) },
-	15 : { "coord" : Vector2i(9,6), "dim" : Vector2i(1,7) },
-	16 : { "coord" : Vector2i(16,6), "dim" : Vector2i(1,7) },
+	1 : { "pos" : Vector2i(1,0), "type" : 1, "size" : Vector2i(11,1) },
+	2 : { "pos" : Vector2i(14,0), "type" : 1, "size" : Vector2i(11,1) },
+	3 : { "pos" : Vector2i(25,0), "type" : 1, "size" : Vector2i(1,9) },
+	4 : { "pos" : Vector2i(25,10), "type" : 1, "size" : Vector2i(1,9) },
+	5 : { "pos" : Vector2i(14,18), "type" : 1, "size" : Vector2i(11,1) },
+	6 : { "pos" : Vector2i(1,18), "type" : 1, "size" : Vector2i(11,1) },
+	7 : { "pos" : Vector2i(0,10), "type" : 1, "size" : Vector2i(1,9) },
+	8 : { "pos" : Vector2i(0,0), "type" : 1, "size" : Vector2i(1,9) },
+	9 : { "pos" : Vector2i(0,9), "type" : 1, "size" : Vector2i(9,1) },
+	10 : { "pos" : Vector2i(17,9), "type" : 1, "size" : Vector2i(9,1) },
+	11 : { "pos" : Vector2i(12,0), "type" : 1, "size" : Vector2i(2,6) },
+	12 : { "pos" : Vector2i(12,13), "type" : 1, "size" : Vector2i(2,6) },
+	13 : { "pos" : Vector2i(10,6), "type" : 1, "size" : Vector2i(6,1) },
+	14 : { "pos" : Vector2i(10,12), "type" : 1, "size" : Vector2i(6,1) },
+	15 : { "pos" : Vector2i(9,6), "type" : 1, "size" : Vector2i(1,7) },
+	16 : { "pos" : Vector2i(16,6), "type" : 1, "size" : Vector2i(1,7) },
 }
 var tiles = { 
 			2 : { "size" : 12, "dim" : Vector2i(4,3), "type" : 2, "cells" : [ 
@@ -74,32 +74,32 @@ var tiles = {
 						},
 }
 var _game_rooms_list = {
-	2: { "coord" : Vector2i(1,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
-	3: { "coord" : Vector2i(5,1), "size" : 12, "group" : 1, "valid":false, "doors": { } },
-	4: { "coord" : Vector2i(9,1), "size" : 15, "group" : 1, "valid":false, "doors": { } },
-	5: { "coord" : Vector2i(1,4), "size" : 20, "group" : 1, "valid":false, "doors": { } },
-	6: { "coord" : Vector2i(5,4), "size" : 20, "group" : 1, "valid":false, "doors": { } },
+	2: { "pos" : Vector2i(1,1), "type" : 2, "area" : 12, "group" : 1, "valid":false, "doors": { } },
+	3: { "pos" : Vector2i(5,1), "type" : 2, "area" : 12, "group" : 1, "valid":false, "doors": { } },
+	4: { "pos" : Vector2i(9,1), "type" : 2, "area" : 15, "group" : 1, "valid":false, "doors": { } },
+	5: { "pos" : Vector2i(1,4), "type" : 2, "area" : 20, "group" : 1, "valid":false, "doors": { } },
+	6: { "pos" : Vector2i(5,4), "type" : 2, "area" : 20, "group" : 1, "valid":false, "doors": { } },
 
-	7: { "coord" : Vector2i(14,1), "size" : 15, "group" : 2, "valid":false, "doors": { } },
-	8: { "coord" : Vector2i(17,1), "size" : 16, "group" : 2, "valid":false, "doors": { } },
-	9: { "coord" : Vector2i(21,1), "size" : 16, "group" : 2, "valid":false, "doors": { } },
-	10: { "coord" : Vector2i(17,5), "size" : 16, "group" : 2, "valid":false, "doors": { } },
-	11: { "coord" : Vector2i(21,5), "size" : 16, "group" : 2, "valid":false, "doors": { } },
+	7: { "pos" : Vector2i(14,1), "type" : 2, "area" : 15, "group" : 2, "valid":false, "doors": { } },
+	8: { "pos" : Vector2i(17,1), "type" : 2, "area" : 16, "group" : 2, "valid":false, "doors": { } },
+	9: { "pos" : Vector2i(21,1), "type" : 2, "area" : 16, "group" : 2, "valid":false, "doors": { } },
+	10: { "pos" : Vector2i(17,5), "type" : 2, "area" : 16, "group" : 2, "valid":false, "doors": { } },
+	11: { "pos" : Vector2i(21,5), "type" : 2, "area" : 16, "group" : 2, "valid":false, "doors": { } },
 
-	12: { "coord" : Vector2i(17,10), "size" : 15, "group" : 4, "valid":false, "doors": { } },
-	13: { "coord" : Vector2i(21,10), "size" : 16, "group" : 4, "valid":false, "doors": { } },
-	14: { "coord" : Vector2i(14,13), "size" : 20, "group" : 4, "valid":false, "doors": { } },
-	15: { "coord" : Vector2i(18,14), "size" : 12, "group" : 4, "valid":false, "doors": { } },
-	16: { "coord" : Vector2i(21,14), "size" : 16, "group" : 4, "valid":false, "doors": { } },
+	12: { "pos" : Vector2i(17,10), "type" : 2, "area" : 15, "group" : 4, "valid":false, "doors": { } },
+	13: { "pos" : Vector2i(21,10), "type" : 2, "area" : 16, "group" : 4, "valid":false, "doors": { } },
+	14: { "pos" : Vector2i(14,13), "type" : 2, "area" : 20, "group" : 4, "valid":false, "doors": { } },
+	15: { "pos" : Vector2i(18,14), "type" : 2, "area" : 12, "group" : 4, "valid":false, "doors": { } },
+	16: { "pos" : Vector2i(21,14), "type" : 2, "area" : 16, "group" : 4, "valid":false, "doors": { } },
 
-	17: { "coord" : Vector2i(1,10), "size" : 16, "group" : 8, "valid":false, "doors": { } },
-	18: { "coord" : Vector2i(5,10), "size" : 6, "group" : 8, "valid":false, "doors": { } },
-	19: { "coord" : Vector2i(7,10), "size" : 6, "group" : 8, "valid":false, "doors": { } },
-	20: { "coord" : Vector2i(1,14), "size" : 16, "group" : 8, "valid":false, "doors": { } },
-	21: { "coord" : Vector2i(5,13), "size" : 20, "group" : 8, "valid":false, "doors": { } },
-	22: { "coord" : Vector2i(9,13), "size" : 15, "group" : 8, "valid":false, "doors": { } },
+	17: { "pos" : Vector2i(1,10), "type" : 2, "area" : 16, "group" : 8, "valid":false, "doors": { } },
+	18: { "pos" : Vector2i(5,10), "type" : 2, "area" : 6, "group" : 8, "valid":false, "doors": { } },
+	19: { "pos" : Vector2i(7,10), "type" : 2, "area" : 6, "group" : 8, "valid":false, "doors": { } },
+	20: { "pos" : Vector2i(1,14), "type" : 2, "area" : 16, "group" : 8, "valid":false, "doors": { } },
+	21: { "pos" : Vector2i(5,13), "type" : 2, "area" : 20, "group" : 8, "valid":false, "doors": { } },
+	22: { "pos" : Vector2i(9,13), "type" : 2, "area" : 15, "group" : 8, "valid":false, "doors": { } },
 
-	23: { "coord" : Vector2i(10,7), "size" : 30, "group" : 16, "valid":false, "doors": { } },
+	23: { "pos" : Vector2i(10,7), "type" : 2, "area" : 30, "group" : 16, "valid":false, "doors": { } },
 }
 
 var _game_map:Array=[]
@@ -180,7 +180,7 @@ func _dd()->void:
 	
 	for key in _passageways:
 		if _can_close_passageway(key,doors_list) == true:
-			var rect:Rect2i = Rect2i(_passageways[key]["coord"], _passageways[key]["dim"])
+			var rect:Rect2i = Rect2i(_passageways[key]["pos"], _passageways[key]["size"])
 			var x1=rect.position.x+rect.size.x-1
 			var y1=rect.position.y+rect.size.y-1
 
@@ -228,7 +228,7 @@ func _can_close_passageway(id:int, doors_list:Array)->bool:
 	var passageway:Dictionary = _passageways[id]
 	var has_door=false
 	for door in doors_list:
-		var rect:Rect2i = Rect2i(passageway["coord"], passageway["dim"])
+		var rect:Rect2i = Rect2i(passageway["pos"], passageway["size"])
 		var x=rect.position.x
 		var y=rect.position.y
 		var x1=x+rect.size.x
@@ -328,30 +328,23 @@ func _remove_room_doors(room_num:int)->void:
 
 	#TODO: i corridoi potrebbero non essere identificati solo con 1
 	if doors.has(1):
-		#print("La stanza [%d] con PS ha sbocchi diretti su 1" % [room_num])
 		for room in keys:
 			if room > MAP_PASSAGEWAY:
 				var exits=[]
 				if _find_exits(room, [room_num], exits) > 0:
 					if GlobalUtils.roll_d100_chance(50) == true:
-						#print("Elimino l'uscita sul corridoio della stanza [%d]" % [room_num])
 						_remove_passageway_doors(room_num, _in_game_rooms[room_num])
 						break
 					else:
-						#print("Elimino le uscite sul corridoio delle stanze %s" % [exits])
 						for exit in exits:
 							_remove_passageway_doors(exit, _in_game_rooms[exit])
 	else:
-		#print("La stanza [%d] con PS NON ha sbocchi diretti su 1" % [room_num])
 		for room in keys:
 			if room <= MAP_PASSAGEWAY:
-				#print("La stanza [%d] ha un uscita su 1 posso togliere la porta non segreta dalla stanza [%d]" % [room,room_num])
 				_remove_normal_doors(room,room_num)
 			else:
 				var exits=[]
 				if _find_exits(room, [room_num], exits) > 0:
-					#print("La stanza [%d] ha un uscita su 1" % [room])
-					#print("Posso eliminare la porta non segreta tra la stanza [%d] e la stanza [%d]" % [room_num,room])
 					_remove_normal_doors(room,room_num)
 
 
@@ -711,7 +704,7 @@ func _create_passageway_door(room_num: int)->void:
 
 func _can_add_door(room_num:int,modifier:int)->bool:
 	var chance:int=0
-	var room_size:int = _in_game_rooms[room_num]["size"]
+	var room_size:int = _in_game_rooms[room_num]["area"]
 	if room_size < 10:
 		chance = 5 - (modifier*5)
 	elif room_size < 15:
@@ -742,13 +735,17 @@ func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:
 		doors[adj] = [{
 			"dir":direction,
 			"pos":position,
-			"type":"normal"
+			"type":"normal",
+			"other_room":adj,
+			"status":"closed"
 		}]
 	else:
 		doors[adj].append( {
 			"dir":direction,
 			"pos":position,
-			"type":"normal"
+			"type":"normal",
+			"other_room":adj,
+			"status":"closed"
 		} )
 
 
