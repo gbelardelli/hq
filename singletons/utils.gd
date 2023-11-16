@@ -44,7 +44,13 @@ func _build_data_path(game:String, type:String)->String:
 
 func _build_quests_path(game:String)->String:
 	return "games/" + game + "/quests/"
-	
+
+func get_game_path(game:String)->String:
+	return "games/" + game
+
+func get_game_data_path(game:String)->String:
+	return get_game_path(game) + "/data/"
+
 func _load_json(path:String)->Dictionary:
 	if not FileAccess.file_exists(path):
 		print("Huston we have a problem! File '%s' not exists\n" % [path])

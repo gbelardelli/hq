@@ -14,6 +14,7 @@ var _max_rooms=5
 var _random_seed =int(Time.get_unix_time_from_system())
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	GameManager.init_game("heroquest")
 	seed(_random_seed)
 	print(_random_seed)
 	check_box.button_pressed = true
@@ -46,13 +47,14 @@ func _set_max_rooms()->void:
 
 func run_test(num_tests:int)->void:
 	for i in range(0,num_tests):
-		_random_seed =int(Time.get_unix_time_from_system())
+		#_random_seed =int(Time.get_unix_time_from_system())
 		var num_rooms=randi_range(6,20)
-		if StaticHqMap.generate_map(num_rooms,num_rooms/3,true,255,_random_seed) == false:
+		if StaticHqMap.generate_map(num_rooms,num_rooms/3,true,255,_random_seed, GameManager.get_map_manager()) == false:
 			break
-		if i % 5000==0:
+		if i % 1000==0:
 			print(i)
-	
+
+
 func gen_map():
 	#run_test(10000)
 	var tiles = StaticHqMap.get_game_map()
@@ -65,8 +67,8 @@ func gen_map():
 		var start_x=1
 		for x in range(StaticHqMap.MAP_WIDTH):
 			var cell=tiles[y][x]
-			cell_y=(cell / 10)+1
-			cell_x=(cell%10)
+			cell_y=(cell / 16)+1
+			cell_x=(cell%16)
 
 			tile_map.set_cell(0, Vector2i(start_x,start_y),0,Vector2i(cell_x,cell_y))
 			if layer[y][x] > 0:
@@ -88,7 +90,7 @@ func _on_button_pressed():
 	seed(_random_seed)
 	print(_random_seed)
 	text_edit_3.text=str(_random_seed)
-	StaticHqMap.generate_map(spin_box.value,spin_box_2.value,check_box.button_pressed,_group,_random_seed)
+	StaticHqMap.generate_map(spin_box.value,spin_box_2.value,check_box.button_pressed,_group,_random_seed,GameManager.get_map_manager())
 	gen_map()
 
 
@@ -156,7 +158,7 @@ func _on_button_5_pressed():
 	var _seed=int(text_edit_3.text)
 	seed(_seed)
 	print(_seed)
-	StaticHqMap.generate_map(spin_box.value,spin_box_2.value,check_box.button_pressed,_group,_seed)
+	StaticHqMap.generate_map(spin_box.value,spin_box_2.value,check_box.button_pressed,_group,_seed,GameManager.get_map_manager())
 	gen_map()
 
 

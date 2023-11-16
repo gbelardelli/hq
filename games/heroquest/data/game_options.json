@@ -1,6 +1,12 @@
 {
 	"name" : "Heroquest",
    "game_token":"heroquest",
+   "game_type":"fixed_board",
+
+   "game_board": {
+   	"width":26,
+   	"height":19
+   },
 
    "furnitures" : {
    	"use_furnitures" : true,
