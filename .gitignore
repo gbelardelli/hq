@@ -2,3 +2,5 @@
 .godot/
 *.bkp
 *.*tmp
+*.drawio
+*.odt

@@ -1,8 +1,5 @@
 extends Node
 
-const MAP_HEIGHT:int  = 19
-const MAP_WIDTH:int   = 26
-
 enum ROOM_TYPES {VOID=0, PASSAGEWAY=1, ROOM=2}
 
 const DIRECTIONS:Array = ["north","east","south","west"]
@@ -11,20 +8,15 @@ const OPPOSITE_VALUE:Dictionary = { "north" : Vector2i(0,-1),
 									"south": Vector2i(0,1), 
 									"west" : Vector2i(-1,0) }
 
-const BOUNDARIES_KEY:String = "boundaries"
-
-var HQMap:Array = []
-
 var _game_rooms_list:Dictionary = {}
+var _in_game_rooms:Dictionary={}
 
 var _game_map:Array=[]
 var _layer_map:Array=[]
 var _fog_map:Array=[]
 
-var _in_game_rooms:Dictionary={}
-var _doorId:int = 1
-
 var _astar_grid:AStarGrid2D
+var _map_mgr:DictTileMap
 
 # Generation parameters
 var _generate_near_center:bool = true
@@ -35,22 +27,10 @@ var _debug_seed:int = 0
 var _rooms_to_generate:int = 0
 var _group_mask:int = 0
 
-func _save(game_file:String)->void:
-	var file = FileAccess.open(game_file, FileAccess.WRITE)
-	file.store_var(_game_rooms_list)
-	file.close()
 
-func _load(game_file:String)->void:
-	var file = FileAccess.open(game_file, FileAccess.READ)
-	_game_rooms_list = file.get_var()
-	print(_game_rooms_list)
-	file.close()
-
-func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, debug_seed:int, map_mgr:MapManager) -> bool:
-	#var game_file=GlobalUtils.get_game_data_path("heroquest")+"game_board.dat"
-	#_load(game_file)
-	HQMap = map_mgr._game_tile_map
-	_game_rooms_list = map_mgr._game_rooms_dict
+func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, debug_seed:int, map_mgr:DictTileMap) -> bool:
+	_game_rooms_list = map_mgr._get_map_dict()
+	_map_mgr = map_mgr
 
 	reset_all()
 	_debug_seed=debug_seed
@@ -96,7 +76,6 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 
 	_close_passageways()
 	_update_game_map()
-
 	return true
 
 
@@ -428,7 +407,6 @@ func _get_passageway_doors_list()->Array:
 
 func _build_neighbor_info()->Dictionary:
 	var neighbor_info={}
-
 	for key in _in_game_rooms:
 		neighbor_info[key] = _get_neighbor_rooms(_in_game_rooms[key])
 
@@ -486,7 +464,6 @@ func _has_door_in_room(room_num:int, adj:int)->bool:
 
 func _generate_rooms(rooms:int,group_id:int)->void:
 	var created_rooms = []
-
 	for i in range(rooms):
 		while true:
 			var id=_game_rooms_list.keys().pick_random()
@@ -507,31 +484,30 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 func reset_all() -> void:
 	_astar_grid = AStarGrid2D.new()
 	_astar_grid.cell_size = Vector2(1, 1)
-	_astar_grid.size = Vector2(MAP_WIDTH, MAP_HEIGHT)
+	_astar_grid.size = Vector2(_map_mgr._get_map_width(), _map_mgr._get_map_height())
 	_astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	_astar_grid.update()
-	_doorId=1
+
 	_game_map=[]
 	_layer_map=[]
 	_fog_map=[]
 	_in_game_rooms={}
 
-	for y in range(MAP_HEIGHT):
+	for y in range(_map_mgr._get_map_height()):
 		_game_map.append([])
 		_layer_map.append([])
 		_fog_map.append([])
 
-		_game_map[y].resize(MAP_WIDTH)
-		_layer_map[y].resize(MAP_WIDTH)
-		_fog_map[y].resize(MAP_WIDTH)
+		_game_map[y].resize(_map_mgr._get_map_width())
+		_layer_map[y].resize(_map_mgr._get_map_width())
+		_fog_map[y].resize(_map_mgr._get_map_width())
 
-		for x in range(MAP_WIDTH):
+		for x in range(_map_mgr._get_map_width()):
 			_game_map[y][x] = 0
 			_layer_map[y][x] = 0
 			_fog_map[y][x] = 0
 			_astar_grid.set_point_solid(Vector2i(x,y),true)
 
-	
 	for key in _game_rooms_list:
 		_game_rooms_list[key]["doors"] = {}
 		_game_rooms_list[key]["boundaries"] = {}
@@ -539,14 +515,14 @@ func reset_all() -> void:
 
 
 # Copia sulla _game_map la room generata prendendola
-# da HQMap. Il ciclo continua per tutta la mappa, così è
+# da _game_board_map_ref. Il ciclo continua per tutta la mappa, così è
 # possibile avere room di qualsiasi forma
 func _create_room(room_num:int,type:int) -> void:
 	var room_cells:int=0
-	for y in range(MAP_HEIGHT):
+	for y in range(_map_mgr._get_map_height()):
 		var cells_founded:int=0
-		for x in range(MAP_WIDTH):
-			var id=HQMap[y][x]
+		for x in range(_map_mgr._get_map_width()):
+			var id=_map_mgr._get_tile(x,y)
 			if id == room_num:
 				_game_map[y][x] = room_num
 				room_cells += 1
@@ -562,17 +538,16 @@ func _create_room(room_num:int,type:int) -> void:
 	# poi per creare le porte sulle pareti
 	_in_game_rooms[room_num]=_game_rooms_list[room_num]
 	var room:Dictionary = _in_game_rooms[room_num]
-	room[BOUNDARIES_KEY] = {}
-	room[BOUNDARIES_KEY]["north"] = {}
-	room[BOUNDARIES_KEY]["east"] = {}
-	room[BOUNDARIES_KEY]["south"] = {}
-	room[BOUNDARIES_KEY]["west"] = {}
+	room["boundaries"]["north"] = {}
+	room["boundaries"]["east"] = {}
+	room["boundaries"]["south"] = {}
+	room["boundaries"]["west"] = {}
 
 
 func _discovery_boundaries(room_num:int) -> void:
-	var room = _in_game_rooms[room_num][BOUNDARIES_KEY]
-	for y in range(MAP_HEIGHT):
-		for x in range(MAP_WIDTH):
+	var room = _in_game_rooms[room_num]["boundaries"]
+	for y in range(_map_mgr._get_map_height()):
+		for x in range(_map_mgr._get_map_width()):
 			if _game_map[y][x] == room_num:
 				_resolve_boundaries(Vector2i(x,y),room,room_num)
 
@@ -748,19 +723,19 @@ func _get_rooms_for_group_mask(group_mask:int)->int:
 
 
 func print_game_map() -> void:
-	for y in range(MAP_HEIGHT):
+	for y in range(_map_mgr._get_map_height()):
 		var map_str=""
-		for x in range(MAP_WIDTH):
+		for x in range(_map_mgr._get_map_width()):
 			map_str += "%02d " % [_game_map[y][x]]
-			
+
 		print(map_str)
 	print("----------------------------------------------------------------------------")
 
 
 func print_layer_map() -> void:
-	for y in range(MAP_HEIGHT):
+	for y in range(_map_mgr._get_map_height()):
 		var map_str=""
-		for x in range(MAP_WIDTH):
+		for x in range(_map_mgr._get_map_width()):
 			map_str += "%02d " % [_layer_map[y][x]]
 			
 		print(map_str)
@@ -784,9 +759,9 @@ func _print_debug(room:int)->void:
 
 
 func _print_astarmap()->void:
-	for y in range(MAP_HEIGHT):
+	for y in range(_map_mgr._get_map_height()):
 		var map_str=""
-		for x in range(MAP_WIDTH):
+		for x in range(_map_mgr._get_map_width()):
 			if _astar_grid.is_point_solid(Vector2i(x,y)) == true:
 				map_str += "%001 "
 			else:
@@ -800,8 +775,7 @@ func get_game_map() -> Array:
 
 func get_layer_map() -> Array:
 	return _layer_map
-	
+
 
 func is_cell_visible(cell:Vector2i) -> bool:
 	return (_fog_map[cell.y][cell.x] > 0)
-

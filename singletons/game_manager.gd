@@ -10,7 +10,7 @@ var _quest_start_scene: PackedScene = preload("res://quest_start/quest_start.tsc
 var _game:String = ""
 var _active_quest:Dictionary = {}
 
-var _map_manager:MapManager = MapManager.new()
+var _map_manager:DictTileMap = DictTileMap.new()
 
 func init_game(game:String):
 	_game=game
@@ -52,7 +52,7 @@ func get_current_game()->String:
 func get_active_quest()->Dictionary:
 	return _active_quest
 
-func get_map_manager()->MapManager:
+func get_map_manager()->DictTileMap:
 	return _map_manager
 
 func _load_dict(game_file:String)->Dictionary:

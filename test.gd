@@ -63,9 +63,10 @@ func gen_map():
 	var cell_x=0
 	var cell_y=0
 	tile_map.clear()
-	for y in range(StaticHqMap.MAP_HEIGHT):
+	var map_mgr:DictTileMap = GameManager.get_map_manager()
+	for y in range(map_mgr._map_height):
 		var start_x=1
-		for x in range(StaticHqMap.MAP_WIDTH):
+		for x in range(map_mgr._map_width):
 			var cell=tiles[y][x]
 			cell_y=(cell / 16)+1
 			cell_x=(cell%16)
