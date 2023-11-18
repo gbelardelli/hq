@@ -16,6 +16,7 @@ var _layer_map:Array=[]
 var _fog_map:Array=[]
 
 var _astar_grid:AStarGrid2D
+var _map_points:AStar2D
 var _map_mgr:DictTileMap
 
 # Generation parameters
@@ -73,7 +74,7 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 		if force_exit>200:
 			print("Huston we have a serious problem! We can't fix rooms exits" % [no_exit_rooms])
 			break
-
+	print_json()
 	_close_passageways()
 	_update_game_map()
 	_generate_traps()
@@ -308,7 +309,7 @@ func _remove_normal_doors(room_num:int, adj:int=0)->void:
 						other_doors.erase(room_num)
 				if adj==0 or adj==other_room:
 					to_delete.append(door)
-
+				
 	for door in to_delete:
 		var key=doors.find_key([door])
 		if key != null:
@@ -389,16 +390,18 @@ func _remove_passageway_doors(room_num:int, room_dict:Dictionary)->void:
 				if door["type"] == "normal":
 					#print("   Remove passageway door on room [%d] door [%s]" % [room_num, door])
 					to_delete.append(room)
+					_map_points.disconnect_points(room_num,room)
 
 	for door in to_delete:
 		doors.erase(door)
+		
 
 
 func _find_exits(room_num:int, visited:Array, exits:Array)->int:
-	room_num=room_num+31
-	if not _in_game_rooms.has(room_num):
-		#print("Room not exists")
-		return 0
+#	room_num=room_num+31
+#	if not _in_game_rooms.has(room_num):
+#		#print("Room not exists")
+#		return 0
 
 	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
 	var cnt=0
@@ -524,6 +527,8 @@ func reset_all() -> void:
 	_astar_grid.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_NEVER
 	_astar_grid.update()
 
+	_map_points = AStar2D.new()
+	
 	_game_map=[]
 	_layer_map=[]
 	_fog_map=[]
@@ -548,6 +553,9 @@ func reset_all() -> void:
 		_game_rooms_list[key]["doors"] = {}
 		_game_rooms_list[key]["boundaries"] = {}
 		_game_rooms_list[key]["valid"] = false
+		
+		if _game_rooms_list[key]["type"] == ROOM_TYPES.PASSAGEWAY:
+			_map_points.add_point(key, _game_rooms_list[key]["pos"])
 
 
 # Copia sulla _game_map la room generata prendendola
@@ -555,6 +563,7 @@ func reset_all() -> void:
 # possibile avere room di qualsiasi forma
 func _create_room(room_num:int,type:int) -> void:
 	var room_cells:int=0
+	_map_points.add_point(room_num,_game_rooms_list[room_num]["pos"])
 	for y in range(_map_mgr._get_map_height()):
 		var cells_founded:int=0
 		for x in range(_map_mgr._get_map_width()):
@@ -660,6 +669,7 @@ func _create_door(direction:String, position:Vector2i, room_num:int)->void:
 	var adj=_get_adjacent_room(direction,position)
 
 	_create_door_dict(room, direction,position,adj)
+	_map_points.connect_points(room_num,adj)
 	if get_room_type(adj) == ROOM_TYPES.ROOM:
 		var other_room=_in_game_rooms[adj]
 		var other_direction=_get_opposite_direction(direction)
@@ -805,6 +815,9 @@ func _print_astarmap()->void:
 		print(map_str)
 	print("----------------------------------------------------------------------------")
 
+
+func _point_list(room:int)->void:
+	print("La stanza %d è connessa con %s" % [room,_map_points.get_point_connections(room)])
 func get_game_map() -> Array:
 	return _game_map
 

@@ -107,10 +107,11 @@ func _on_button_3_pressed():
 
 func _on_button_4_pressed():
 	var room_num:int = int(text_edit_2.text)
-	var visited_rooms:Array = [room_num]
-	var exits_rooms:Array = []
-	var exits=StaticHqMap._find_exits(room_num,visited_rooms,exits_rooms)
-	print("Room [%d] has exits on [%s] rooms" % [room_num, exits_rooms])
+	StaticHqMap._point_list(room_num)
+#	var visited_rooms:Array = [room_num]
+#	var exits_rooms:Array = []
+#	var exits=StaticHqMap._find_exits(room_num,visited_rooms,exits_rooms)
+#	print("Room [%d] has exits on [%s] rooms" % [room_num, exits_rooms])
 
 
 func _on_check_button_toggled(button_pressed):
