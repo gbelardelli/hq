@@ -76,7 +76,38 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 
 	_close_passageways()
 	_update_game_map()
+	_generate_traps()
+	_generate_start_end_pos()
+
 	return true
+
+
+func _generate_start_end_pos()->void:
+	# Le posizioni di inizio e fine missione possono trovarsi sia in una
+	# stanza sia al bordo del tabellone (scelta randomica).
+	# Indipendentemente da dove viene scelta la posizione iniziale,
+	# l'algoritmo cercherà la stanza/corridio più lontano per metterci
+	# l'uscita.
+	var start_room:int=0
+	var end_room:int=0
+	var group:int=0
+	if GlobalUtils.roll_d100_chance(50) == true:
+		# Entrata da una stanza
+		start_room=_in_game_rooms.keys().pick_random()
+		group=_in_game_rooms[start_room]["group"]
+		print("Entra dalla stanza %d" % [start_room-31])
+	else:
+		print("Entra da un corridoio")
+
+	if GlobalUtils.roll_d100_chance(50) == true:
+		# Uscita da una stanza
+		end_room=_in_game_rooms.keys().pick_random()
+		print("Esce dalla stanza %d" % [end_room-31])
+	else:
+		print("Esce da un corridoio")
+
+func _generate_traps()->void:
+	pass
 
 
 func _close_passageways()->void:
@@ -364,6 +395,11 @@ func _remove_passageway_doors(room_num:int, room_dict:Dictionary)->void:
 
 
 func _find_exits(room_num:int, visited:Array, exits:Array)->int:
+	room_num=room_num+31
+	if not _in_game_rooms.has(room_num):
+		#print("Room not exists")
+		return 0
+
 	var doors:Dictionary=_in_game_rooms[room_num]["doors"]
 	var cnt=0
 	for room in doors:
