@@ -455,11 +455,11 @@ func _build_neighbor_info()->Dictionary:
 func _get_neighbor_rooms(room:Dictionary)->Array:
 	var neighbor_rooms=[]
 	var boundaries=room["boundaries"]
-	for dir in boundaries:
-		var walls=boundaries[dir]
-		for wall in walls:
-			if get_room_type(wall) == ROOM_TYPES.ROOM:
-				neighbor_rooms.append(wall)
+	#for dir in boundaries:
+	#var walls=boundaries[dir]
+	for wall in boundaries:
+		if get_room_type(wall) == ROOM_TYPES.ROOM:
+			neighbor_rooms.append(wall)
 
 	return neighbor_rooms
 
@@ -469,22 +469,22 @@ func _add_door(main_room:int, other_room:int)->void:
 		return
 
 	var room_boundaries={}
-	var boundaries:Dictionary=_in_game_rooms[main_room]["boundaries"]
-	for dir in boundaries:
-		var walls=boundaries[dir]
-		for wall in walls:
-			if wall == other_room:
-				room_boundaries[dir]=walls[wall]
+	var boundaries:Array=_in_game_rooms[main_room]["boundaries"][other_room]
+#	for dir in boundaries:
+#		var walls=boundaries[dir]
+#		for wall in walls:
+#			if dir == other_room:
+#				room_boundaries[dir]=walls[wall]
 
 	var direction = room_boundaries.keys().pick_random()
 	var door_coord:Vector2i
 	if _generate_near_center == true:
-		var idx=room_boundaries[direction].size()
+		var idx=boundaries.size()
 		idx = idx / 2
-		door_coord=room_boundaries[direction][idx]
+		door_coord=boundaries[idx]
 	else:
-		door_coord=room_boundaries[direction].pick_random()
-	_create_door(direction, door_coord, main_room)
+		door_coord=boundaries.pick_random()
+	_create_door(other_room, door_coord, main_room)
 
 
 func _has_door_in_room(room_num:int, adj:int)->bool:
@@ -517,6 +517,7 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 
 	for key in _in_game_rooms:
 		_discovery_boundaries(key)
+		print_json()
 		_create_passageway_door(key)
 
 
@@ -583,10 +584,10 @@ func _create_room(room_num:int,type:int) -> void:
 	# poi per creare le porte sulle pareti
 	_in_game_rooms[room_num]=_game_rooms_list[room_num]
 	var room:Dictionary = _in_game_rooms[room_num]
-	room["boundaries"]["north"] = {}
-	room["boundaries"]["east"] = {}
-	room["boundaries"]["south"] = {}
-	room["boundaries"]["west"] = {}
+#	room["boundaries"]["north"] = {}
+#	room["boundaries"]["east"] = {}
+#	room["boundaries"]["south"] = {}
+#	room["boundaries"]["west"] = {}
 
 
 func _discovery_boundaries(room_num:int) -> void:
@@ -605,21 +606,21 @@ func _resolve_boundaries(cell_pos:Vector2i, room:Dictionary,room_num:int)->void:
 		if cell == room_num:
 			continue
 
-		var cell_room=room[dir]
-		if(  cell_room.has(cell)) == false:
-			cell_room[cell] = []
+		#var cell_room=room[dir]
+		if(  room.has(cell)) == false:
+			room[cell] = []
 
-		cell_room[cell].append(cell_pos)
+		room[cell].append(cell_pos)
 
 
 func _create_passageway_door(room_num: int)->void:
 	var room = _in_game_rooms[room_num]["boundaries"]
 	var random_corridor_wall=[]
 
-	for dir in DIRECTIONS:
-		for wall in room[dir]:
-			if get_room_type(wall) == ROOM_TYPES.PASSAGEWAY:
-				random_corridor_wall.append( { dir: room[dir][wall] })
+	#for dir in DIRECTIONS:
+	for wall in room:
+		if get_room_type(wall) == ROOM_TYPES.PASSAGEWAY:
+			random_corridor_wall.append( {wall: room[wall]})
 
 	var prev_dir:Array = []
 	var total_doors:int=0
@@ -664,31 +665,40 @@ func _can_add_door(room_num:int,modifier:int)->bool:
 	return GlobalUtils.roll_d100_chance(chance)
 
 
-func _create_door(direction:String, position:Vector2i, room_num:int)->void:
+func _create_door(adj:int, position:Vector2i, room_num:int)->void:
 	var room = _in_game_rooms[room_num]
-	var adj=_get_adjacent_room(direction,position)
+	#var adj=_get_adjacent_room(direction,position)
 
-	_create_door_dict(room, direction,position,adj)
+	_create_door_dict(room, "direction",position,adj)
 	_map_points.connect_points(room_num,adj)
 	if get_room_type(adj) == ROOM_TYPES.ROOM:
 		var other_room=_in_game_rooms[adj]
-		var other_direction=_get_opposite_direction(direction)
-		_create_door_dict(other_room, other_direction,position+OPPOSITE_VALUE[direction],room_num)
+		var direction=_find_room_direction(position, adj)
+		#var other_direction=_get_opposite_direction(direction)
+		_create_door_dict(other_room, "other_direction",position-OPPOSITE_VALUE[direction],room_num)
 
 
+func _find_room_direction(position:Vector2i, adj:int)->String:
+	for dir in DIRECTIONS:
+		var direction=position+OPPOSITE_VALUE[dir]
+		if _game_map[direction.y][direction.x] == adj:
+			return dir
+
+	return ""
+	
 func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:int)->void:
 	var doors:Dictionary=room["doors"]
 
 	if doors.has(adj) == false:
 		doors[adj] = [{
-			"dir":direction,
+			#"dir":direction,
 			"pos":position,
 			"type":"normal",
 			"status":"closed"
 		}]
 	else:
 		doors[adj].append( {
-			"dir":direction,
+			#"dir":direction,
 			"pos":position,
 			"type":"normal",
 			"status":"closed"

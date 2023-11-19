@@ -14,6 +14,13 @@ var _max_rooms=5
 var _random_seed =int(Time.get_unix_time_from_system())
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	var v1:Vector2i= Vector2i(1,4)
+	var v2:Vector2i= Vector2i(0,1)
+	
+	var v3=v1-v2
+	
+	
+	
 	GameManager.init_game("heroquest")
 	seed(_random_seed)
 	print(_random_seed)
