@@ -50,6 +50,7 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 
 	_rooms_to_generate = rooms
 	_generate_rooms(rooms,group_mask)
+	return true
 	_build_paths()
 	_generate_secret_doors(_max_secret_doors,_chance_of_secret_door)
 
@@ -516,9 +517,61 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 
 	for key in _in_game_rooms:
 		_discovery_boundaries(key)
-		print_json()
-		_create_passageway_door(key)
+		var boundaries=_in_game_rooms[key]["boundaries"].keys()
+		print("room [%d] confina con [%s]" % [key, boundaries])
+		
+		#_create_passageway_door(key)
+	prova()
+	#print_json()
 
+
+func prova()->void:
+	for key in _in_game_rooms:
+		var dice=GlobalUtils.roll_dice(4)
+		var neighbor_rooms=_get_neighbor_roomsss(_in_game_rooms[key])
+		var neighbor_corridors=_get_neighbor_corridors(_in_game_rooms[key])
+		if dice == 1:
+			if neighbor_rooms.size() == 0:
+				_map_points.connect_points(key,neighbor_corridors.pick_random())
+			elif neighbor_rooms.size() == 1:
+				_map_points.connect_points(key,neighbor_rooms.pick_random())
+			else:
+				var choosed_room=0
+				var used_room=0
+				for i in 2:
+					while true:
+						choosed_room=neighbor_rooms.pick_random()
+						if choosed_room != used_room:
+							used_room=choosed_room
+							break
+
+					_map_points.connect_points(key,choosed_room)
+		elif dice == 2:
+			if neighbor_rooms.size() == 0:
+				_map_points.connect_points(key,neighbor_corridors.pick_random())
+			else:
+				_map_points.connect_points(key,neighbor_corridors.pick_random())
+				_map_points.connect_points(key,neighbor_rooms.pick_random())
+		elif dice == 3:
+			_map_points.connect_points(key,neighbor_corridors.pick_random())
+		else:
+			_map_points.connect_points(key,neighbor_rooms.pick_random())
+
+func _get_neighbor_roomsss(room:Dictionary)->Array:
+	var res:Array=[]
+	for key in room["boundaries"].keys():
+		if get_room_type(key) == GameTypes.ROOM_TYPES.ROOM:
+			res.append(key)
+
+	return res
+
+func _get_neighbor_corridors(room:Dictionary)->Array:
+	var res:Array=[]
+	for key in room["boundaries"].keys():
+		if get_room_type(key) == GameTypes.ROOM_TYPES.PASSAGEWAY:
+			res.append(key)
+
+	return res
 
 func reset_all() -> void:
 	_astar_grid = AStarGrid2D.new()
@@ -581,8 +634,9 @@ func _create_room(room_num:int,type:int) -> void:
 
 	# Copia le info della room e aggiunge i boundaries che servono
 	# poi per creare le porte sulle pareti
+	print(_game_rooms_list[room_num])
 	_in_game_rooms[room_num]=_game_rooms_list[room_num]
-	var room:Dictionary = _in_game_rooms[room_num]
+	#var room:Dictionary = _in_game_rooms[room_num]
 #	room["boundaries"]["north"] = {}
 #	room["boundaries"]["east"] = {}
 #	room["boundaries"]["south"] = {}

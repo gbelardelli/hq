@@ -70,7 +70,7 @@ func _check_game(data:Dictionary, game:String)->bool:
 	if data[KeyManager.KEY_GAME_TOKEN] == game:
 		return true
 	
-	print("File has different game: requested '%s' founded '%s'" % [game, data[KeyManager.KEY_GAME] ])
+	print("File has different token: requested '%s' founded '%s'" % [game, data[KeyManager.KEY_GAME_TOKEN] ])
 	return false
 
 func load_quest(file:String, game:String)->Dictionary:
