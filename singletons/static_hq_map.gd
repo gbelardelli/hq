@@ -1,7 +1,5 @@
 extends Node
 
-enum ROOM_TYPES {VOID=0, PASSAGEWAY=1, ROOM=2}
-
 const DIRECTIONS:Array = ["north","east","south","west"]
 const OPPOSITE_VALUE:Dictionary = { "north" : Vector2i(0,-1), 
 									"east" : Vector2i(1,0), 
@@ -117,7 +115,7 @@ func _close_passageways()->void:
 	var passageways:Dictionary = {}
 	
 	for key in _game_rooms_list:
-		if get_room_type(key) == ROOM_TYPES.PASSAGEWAY:
+		if get_room_type(key) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			passageways[key] = _game_rooms_list[key]
 
 	# Check if passageway has doors
@@ -200,14 +198,14 @@ func _generate_secret_doors(num_doors:int, chance:int)->void:
 			var doors_array:Array
 			var chosed_door:Dictionary
 
-			if get_room_type(door) == ROOM_TYPES.ROOM:
+			if get_room_type(door) == GameTypes.ROOM_TYPES.ROOM:
 				doors_array=_in_game_rooms[door]["doors"][room]
 				chosed_door=doors_array[0]
-				chosed_door["type"]="secret"
+				chosed_door["type"]=GameTypes.DOOR_TYPES.SECRET
 
 			doors_array=_in_game_rooms[room]["doors"][door]
 			chosed_door=doors_array[0]
-			chosed_door["type"]="secret"
+			chosed_door["type"]=GameTypes.DOOR_TYPES.SECRET
 
 			_remove_unnecessary_doors(room, door)
 
@@ -216,7 +214,7 @@ func _has_secret_doors(room_num:int)->bool:
 	var doors_key:Dictionary=_in_game_rooms[room_num]["doors"]
 	for doors in doors_key:
 		for door in doors_key[doors]:
-			if door["type"]=="secret":
+			if door["type"]==GameTypes.DOOR_TYPES.SECRET:
 				return true
 
 	return false
@@ -226,14 +224,14 @@ func _remove_unnecessary_doors(room_num:int, door:int)->void:
 	var doors=_in_game_rooms[room_num]["doors"]
 	var can_be_removed_doors:Dictionary = {}
 
-	if get_room_type(door) == ROOM_TYPES.PASSAGEWAY:
+	if get_room_type(door) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 		# Prendere le porte di questa stanza ad esclusione di quella di entrata
 		# Per ogni porta controllare se le stanze adiacenti hanno uno sbocco
 		var rooms:Array = doors.keys()
 		var exit_rooms:Dictionary = {}
 		var exits_rooms:Array = []
 		for room in rooms:
-			if get_room_type(room) == ROOM_TYPES.PASSAGEWAY:
+			if get_room_type(room) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 				continue
 
 			var visited_rooms:Array = [room_num]
@@ -270,13 +268,13 @@ func _remove_room_doors(room_num:int)->void:
 	var door_in_passageway:bool = false
 
 	for key in keys:
-		if get_room_type(key) == ROOM_TYPES.PASSAGEWAY:
+		if get_room_type(key) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			door_in_passageway=true
 			break
 
 	if door_in_passageway==true:
 		for room in keys:
-			if get_room_type(room) == ROOM_TYPES.ROOM:
+			if get_room_type(room) == GameTypes.ROOM_TYPES.ROOM:
 				var exits=[]
 				if _find_exits(room, [room_num], exits) > 0:
 					if GlobalUtils.roll_d100_chance(50) == true:
@@ -287,7 +285,7 @@ func _remove_room_doors(room_num:int)->void:
 							_remove_passageway_doors(exit, _in_game_rooms[exit])
 	else:
 		for room in keys:
-			if get_room_type(room) == ROOM_TYPES.PASSAGEWAY:
+			if get_room_type(room) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 				_remove_normal_doors(room,room_num)
 			else:
 				var exits=[]
@@ -301,9 +299,10 @@ func _remove_normal_doors(room_num:int, adj:int=0)->void:
 
 	for room in doors:
 		for door in doors[room]:
-			if door["type"] == "normal":
-				var other_room=_get_adjacent_room(door["dir"], door["pos"])
-				if get_room_type(other_room) == ROOM_TYPES.ROOM:
+			if door["type"] == GameTypes.DOOR_TYPES.NORMAL:
+				var direction=_find_room_direction(door["pos"], room)
+				var other_room=_get_adjacent_room(direction, door["pos"])
+				if get_room_type(other_room) == GameTypes.ROOM_TYPES.ROOM:
 					if adj==0 or adj==other_room:
 						var other_doors=_in_game_rooms[other_room]["doors"]
 						other_doors.erase(room_num)
@@ -385,9 +384,9 @@ func _remove_passageway_doors(room_num:int, room_dict:Dictionary)->void:
 	var to_delete:Array = []
 
 	for room in doors:
-		if get_room_type(room) == ROOM_TYPES.PASSAGEWAY:
+		if get_room_type(room) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			for door in doors[room]:
-				if door["type"] == "normal":
+				if door["type"] == GameTypes.DOOR_TYPES.NORMAL:
 					#print("   Remove passageway door on room [%d] door [%s]" % [room_num, door])
 					to_delete.append(room)
 					_map_points.disconnect_points(room_num,room)
@@ -409,7 +408,7 @@ func _find_exits(room_num:int, visited:Array, exits:Array)->int:
 		if room in visited:
 			continue
 
-		if get_room_type(room) == ROOM_TYPES.PASSAGEWAY:
+		if get_room_type(room) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			#print("  Find exit in [%d]"%[room_num])
 			exits.append(room_num)
 			cnt+=1
@@ -426,7 +425,7 @@ func _update_game_map()->void:
 		var doors=_in_game_rooms[room_num]["doors"]
 		for door_num in doors:
 			for door in doors[door_num]:
-				_add_door_to_map(door["dir"],door["pos"], door["type"] == "secret")
+				_add_door_to_map(door["dir"],door["pos"], door["type"] == GameTypes.DOOR_TYPES.SECRET)
 
 
 func _get_passageway_doors_list()->Array:
@@ -435,7 +434,7 @@ func _get_passageway_doors_list()->Array:
 	for room_num in _in_game_rooms:
 		var doors=_in_game_rooms[room_num]["doors"]
 		for door_num in doors:
-			if get_room_type(door_num) == ROOM_TYPES.PASSAGEWAY:
+			if get_room_type(door_num) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 				for door in doors[door_num]:
 					var pos:Vector2i = door["pos"]+OPPOSITE_VALUE[door["dir"]]
 					_astar_grid.set_point_solid(pos,false)
@@ -458,7 +457,7 @@ func _get_neighbor_rooms(room:Dictionary)->Array:
 	#for dir in boundaries:
 	#var walls=boundaries[dir]
 	for wall in boundaries:
-		if get_room_type(wall) == ROOM_TYPES.ROOM:
+		if get_room_type(wall) == GameTypes.ROOM_TYPES.ROOM:
 			neighbor_rooms.append(wall)
 
 	return neighbor_rooms
@@ -555,7 +554,7 @@ func reset_all() -> void:
 		_game_rooms_list[key]["boundaries"] = {}
 		_game_rooms_list[key]["valid"] = false
 		
-		if _game_rooms_list[key]["type"] == ROOM_TYPES.PASSAGEWAY:
+		if _game_rooms_list[key]["type"] == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			_map_points.add_point(key, _game_rooms_list[key]["pos"])
 
 
@@ -619,7 +618,7 @@ func _create_passageway_door(room_num: int)->void:
 
 	#for dir in DIRECTIONS:
 	for wall in room:
-		if get_room_type(wall) == ROOM_TYPES.PASSAGEWAY:
+		if get_room_type(wall) == GameTypes.ROOM_TYPES.PASSAGEWAY:
 			random_corridor_wall.append( {wall: room[wall]})
 
 	var prev_dir:Array = []
@@ -671,7 +670,7 @@ func _create_door(adj:int, position:Vector2i, room_num:int)->void:
 
 	_create_door_dict(room, "direction",position,adj)
 	_map_points.connect_points(room_num,adj)
-	if get_room_type(adj) == ROOM_TYPES.ROOM:
+	if get_room_type(adj) == GameTypes.ROOM_TYPES.ROOM:
 		var other_room=_in_game_rooms[adj]
 		var direction=_find_room_direction(position, adj)
 		#var other_direction=_get_opposite_direction(direction)
@@ -685,7 +684,8 @@ func _find_room_direction(position:Vector2i, adj:int)->String:
 			return dir
 
 	return ""
-	
+
+
 func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:int)->void:
 	var doors:Dictionary=room["doors"]
 
@@ -693,15 +693,15 @@ func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:
 		doors[adj] = [{
 			#"dir":direction,
 			"pos":position,
-			"type":"normal",
-			"status":"closed"
+			"type":GameTypes.DOOR_TYPES.NORMAL,
+			"status":GameTypes.DOOR_STATUS.CLOSED
 		}]
 	else:
 		doors[adj].append( {
 			#"dir":direction,
 			"pos":position,
-			"type":"normal",
-			"status":"closed"
+			"type":GameTypes.DOOR_TYPES.NORMAL,
+			"status":GameTypes.DOOR_STATUS.CLOSED
 		} )
 
 
@@ -759,7 +759,7 @@ func _get_rooms_in_group(group:int)->int:
 
 func get_room_type(id:int)->int:
 	if id==0:
-		return ROOM_TYPES.VOID
+		return GameTypes.ROOM_TYPES.VOID
 
 	return _game_rooms_list[id]["type"]
 
