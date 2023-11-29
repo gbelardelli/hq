@@ -40,16 +40,19 @@ func generate_map(rooms:int, secret_doors:int, near_center:bool,group_mask:int, 
 
 	_generate_near_center=near_center
 	_max_secret_doors = secret_doors
-	
+
 	var rooms_in_mask=_get_rooms_for_group_mask(group_mask)
 	if rooms > rooms_in_mask:
 		rooms=rooms_in_mask
 
 	if _max_secret_doors > rooms:
-		_max_secret_doors = int(rooms/3)
+		#_max_secret_doors = int(rooms/3)
+		_max_secret_doors=rooms
 
 	_rooms_to_generate = rooms
 	_generate_rooms(rooms,group_mask)
+	#print_json()
+	_update_game_map()
 	return true
 	_build_paths()
 	_generate_secret_doors(_max_secret_doors,_chance_of_secret_door)
@@ -465,18 +468,13 @@ func _get_neighbor_rooms(room:Dictionary)->Array:
 
 
 func _add_door(main_room:int, other_room:int)->void:
+	if _map_points.are_points_connected(main_room,other_room) == true:
+		return
+
 	if _has_secret_doors(main_room) == true:
 		return
 
-	var room_boundaries={}
 	var boundaries:Array=_in_game_rooms[main_room]["boundaries"][other_room]
-#	for dir in boundaries:
-#		var walls=boundaries[dir]
-#		for wall in walls:
-#			if dir == other_room:
-#				room_boundaries[dir]=walls[wall]
-
-	var direction = room_boundaries.keys().pick_random()
 	var door_coord:Vector2i
 	if _generate_near_center == true:
 		var idx=boundaries.size()
@@ -519,43 +517,50 @@ func _generate_rooms(rooms:int,group_id:int)->void:
 		_discovery_boundaries(key)
 		var boundaries=_in_game_rooms[key]["boundaries"].keys()
 		print("room [%d] confina con [%s]" % [key, boundaries])
-		
+
 		#_create_passageway_door(key)
+	_add_corridors_to_map()
 	prova()
+	_remove_unuseful_doors()
 	#print_json()
 
 
 func prova()->void:
 	for key in _in_game_rooms:
-		var dice=GlobalUtils.roll_dice(4)
-		var neighbor_rooms=_get_neighbor_roomsss(_in_game_rooms[key])
-		var neighbor_corridors=_get_neighbor_corridors(_in_game_rooms[key])
-		if dice == 1:
-			if neighbor_rooms.size() == 0:
-				_map_points.connect_points(key,neighbor_corridors.pick_random())
-			elif neighbor_rooms.size() == 1:
-				_map_points.connect_points(key,neighbor_rooms.pick_random())
-			else:
-				var choosed_room=0
-				var used_room=0
-				for i in 2:
-					while true:
-						choosed_room=neighbor_rooms.pick_random()
-						if choosed_room != used_room:
-							used_room=choosed_room
-							break
+		if get_room_type(key) == GameTypes.ROOM_TYPES.ROOM:
+			var dice=GlobalUtils.roll_dice(4)
+			var neighbor_rooms=_get_neighbor_roomsss(_in_game_rooms[key])
+			var neighbor_corridors=_get_neighbor_corridors(_in_game_rooms[key])
+			if dice == 1:
+				if neighbor_rooms.size() == 0:
+					_add_door(key,neighbor_corridors.pick_random())
+				elif neighbor_rooms.size() == 1:
+					_add_door(key,neighbor_rooms.pick_random())
+				else:
+					var choosed_room=0
+					var used_room=0
+					for i in 2:
+						while true:
+							choosed_room=neighbor_rooms.pick_random()
+							if choosed_room != used_room:
+								used_room=choosed_room
+								break
 
-					_map_points.connect_points(key,choosed_room)
-		elif dice == 2:
-			if neighbor_rooms.size() == 0:
-				_map_points.connect_points(key,neighbor_corridors.pick_random())
+						_add_door(key,choosed_room)
+			elif dice == 2:
+				if neighbor_rooms.size() == 0:
+					_add_door(key,neighbor_corridors.pick_random())
+				else:
+					_add_door(key,neighbor_corridors.pick_random())
+					_add_door(key,neighbor_rooms.pick_random())
+			elif dice == 3:
+				_add_door(key,neighbor_corridors.pick_random())
 			else:
-				_map_points.connect_points(key,neighbor_corridors.pick_random())
-				_map_points.connect_points(key,neighbor_rooms.pick_random())
-		elif dice == 3:
-			_map_points.connect_points(key,neighbor_corridors.pick_random())
-		else:
-			_map_points.connect_points(key,neighbor_rooms.pick_random())
+				if neighbor_rooms.size() == 0:
+					_add_door(key,neighbor_corridors.pick_random())
+				else:
+					_add_door(key,neighbor_rooms.pick_random())
+
 
 func _get_neighbor_roomsss(room:Dictionary)->Array:
 	var res:Array=[]
@@ -565,6 +570,7 @@ func _get_neighbor_roomsss(room:Dictionary)->Array:
 
 	return res
 
+
 func _get_neighbor_corridors(room:Dictionary)->Array:
 	var res:Array=[]
 	for key in room["boundaries"].keys():
@@ -572,6 +578,81 @@ func _get_neighbor_corridors(room:Dictionary)->Array:
 			res.append(key)
 
 	return res
+
+
+func _get_exits_on_corridor(room_num:int)->Array:
+	var path_list:Array=[]
+	var corridors:Array=_get_corridors_ids()
+	for corridor in corridors:
+		var points=_map_points.get_id_path(room_num,corridor)
+		if points.size() > 0:
+			path_list.append(points)
+			print("Room %d can exits [%s]" % [room_num,points])
+
+	return path_list
+
+func _get_corridors_ids()->Array:
+	var ret:Array=[]
+	for key in _game_rooms_list:
+		if get_room_type(key) == GameTypes.ROOM_TYPES.PASSAGEWAY:
+			ret.append(key)
+
+	return ret
+
+
+func _add_corridors_to_map()->void:
+	for room in _in_game_rooms:
+		var corridors=_get_neighbor_corridors(_in_game_rooms[room])
+		for corridor in corridors:
+			if _in_game_rooms.has(corridor) == false:
+				_in_game_rooms[corridor] = _game_rooms_list[corridor]
+
+
+func _get_exit_on_corridor(room_num:int)->int:
+	var points:Array=_map_points.get_point_connections(room_num)
+	for point in points:
+		if get_room_type(point) == GameTypes.ROOM_TYPES.PASSAGEWAY:
+			return point
+
+	return 0
+
+
+func _remove_unuseful_doors()->void:
+	for room in _in_game_rooms:
+		if get_room_type(room) == GameTypes.ROOM_TYPES.ROOM:
+			var corridor=_get_exit_on_corridor(room)
+			var can_be_removed:bool = false
+			if corridor > 0:
+				var paths=_get_exits_on_corridor(room)
+				
+				for path in paths:
+					if corridor not in path:
+						can_be_removed = true
+						break
+
+			if can_be_removed == true:
+				print("La porta sul corridoio nella stanza %d può essere rimossa" % [room])
+				_map_points.disconnect_points(room,corridor)
+
+
+func _create_door(adj:int, position:Vector2i, room_num:int)->void:
+	var room = _in_game_rooms[room_num]
+	var is_secret:bool = false
+
+	if _max_secret_doors > 0:
+		is_secret = GlobalUtils.roll_d100_chance(50)
+		if is_secret == true:
+			_max_secret_doors-=1
+
+	var direction=_find_room_direction(position, adj)
+	_create_door_dict(room, direction,position,adj,is_secret)
+	print("Add door from [%d] to [%d]" % [room_num,adj])
+	_map_points.connect_points(room_num,adj)
+	#if get_room_type(adj) == GameTypes.ROOM_TYPES.ROOM:
+	var other_room=_in_game_rooms[adj]
+	direction=_get_opposite_direction(direction)
+	_create_door_dict(other_room, direction,position-OPPOSITE_VALUE[direction],room_num,is_secret)
+
 
 func reset_all() -> void:
 	_astar_grid = AStarGrid2D.new()
@@ -632,15 +713,7 @@ func _create_room(room_num:int,type:int) -> void:
 		if room_cells >= 1 and cells_founded == 0:
 			break
 
-	# Copia le info della room e aggiunge i boundaries che servono
-	# poi per creare le porte sulle pareti
-	print(_game_rooms_list[room_num])
 	_in_game_rooms[room_num]=_game_rooms_list[room_num]
-	#var room:Dictionary = _in_game_rooms[room_num]
-#	room["boundaries"]["north"] = {}
-#	room["boundaries"]["east"] = {}
-#	room["boundaries"]["south"] = {}
-#	room["boundaries"]["west"] = {}
 
 
 func _discovery_boundaries(room_num:int) -> void:
@@ -659,7 +732,6 @@ func _resolve_boundaries(cell_pos:Vector2i, room:Dictionary,room_num:int)->void:
 		if cell == room_num:
 			continue
 
-		#var cell_room=room[dir]
 		if(  room.has(cell)) == false:
 			room[cell] = []
 
@@ -718,17 +790,6 @@ func _can_add_door(room_num:int,modifier:int)->bool:
 	return GlobalUtils.roll_d100_chance(chance)
 
 
-func _create_door(adj:int, position:Vector2i, room_num:int)->void:
-	var room = _in_game_rooms[room_num]
-	#var adj=_get_adjacent_room(direction,position)
-
-	_create_door_dict(room, "direction",position,adj)
-	_map_points.connect_points(room_num,adj)
-	if get_room_type(adj) == GameTypes.ROOM_TYPES.ROOM:
-		var other_room=_in_game_rooms[adj]
-		var direction=_find_room_direction(position, adj)
-		#var other_direction=_get_opposite_direction(direction)
-		_create_door_dict(other_room, "other_direction",position-OPPOSITE_VALUE[direction],room_num)
 
 
 func _find_room_direction(position:Vector2i, adj:int)->String:
@@ -740,21 +801,24 @@ func _find_room_direction(position:Vector2i, adj:int)->String:
 	return ""
 
 
-func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:int)->void:
+func _create_door_dict(room:Dictionary, direction:String,position:Vector2i, adj:int, is_secret:bool)->void:
 	var doors:Dictionary=room["doors"]
+	var type=GameTypes.DOOR_TYPES.NORMAL
+	if is_secret == true:
+		type=GameTypes.DOOR_TYPES.SECRET
 
 	if doors.has(adj) == false:
 		doors[adj] = [{
-			#"dir":direction,
+			"dir":direction,
 			"pos":position,
-			"type":GameTypes.DOOR_TYPES.NORMAL,
+			"type":type,
 			"status":GameTypes.DOOR_STATUS.CLOSED
 		}]
 	else:
 		doors[adj].append( {
-			#"dir":direction,
+			"dir":direction,
 			"pos":position,
-			"type":GameTypes.DOOR_TYPES.NORMAL,
+			"type":type,
 			"status":GameTypes.DOOR_STATUS.CLOSED
 		} )
 

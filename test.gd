@@ -48,7 +48,7 @@ func _set_max_rooms()->void:
 
 	_max_rooms=max
 	spin_box.max_value=_max_rooms
-	spin_box_2.max_value=_max_rooms/3
+	spin_box_2.max_value=_max_rooms
 
 	label_3.text=str(_max_rooms)
 
@@ -113,8 +113,9 @@ func _on_button_3_pressed():
 
 
 func _on_button_4_pressed():
-	var room_num:int = int(text_edit_2.text)
+	var room_num:int = int(text_edit_2.text)+31
 	StaticHqMap._point_list(room_num)
+	StaticHqMap._get_exits_on_corridor(room_num)
 #	var visited_rooms:Array = [room_num]
 #	var exits_rooms:Array = []
 #	var exits=StaticHqMap._find_exits(room_num,visited_rooms,exits_rooms)
