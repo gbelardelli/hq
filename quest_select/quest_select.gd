@@ -6,6 +6,7 @@ var _quests_list:Array = []
 
 # Called when the node enters the scene tree for the first time.
 func _ready():
+	GameManager.init_game("heroquest")
 	var game = GameManager.get_current_game()
 	_quests_list=GlobalUtils.get_quests_list(game)
 	item_list.clear()

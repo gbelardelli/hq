@@ -18,7 +18,7 @@ config/icon="res://icon.svg"
 
 GameTypes="*res://singletons/game_types.gd"
 KeyManager="*res://singletons/key_manager.gd"
-GlobalUtils="*res://singletons/utils.gd"
+GlobalUtils="*res://shared/autoload/utils.gd"
 GameManager="*res://singletons/game_manager.gd"
 HQSOLO="*res://singletons/functions.gd"
 StaticHqMap="*res://singletons/static_hq_map.gd"
